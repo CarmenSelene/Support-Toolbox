@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blame Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column; /* Stack title and wheel vertically */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 1.2em;
+            color: #555;
+            font-weight: 400;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 300px; /* Size of the wheel */
+            height: 300px;
+            cursor: pointer;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            border: 5px solid #ccc;
+            
+            /* This creates the 6-segment pie chart.
+              Each color gets an equal 60-degree slice (360 / 6 = 60).
+            */
+            background: conic-gradient(
+                #FF6347 0deg 60deg,  /* Tomato */
+                #4682B4 60deg 120deg, /* SteelBlue */
+                #32CD32 120deg 180deg, /* LimeGreen */
+                #FFD700 180deg 240deg, /* Gold */
+                #FF4500 240deg 300deg, /* OrangeRed */
+                #9370DB 300deg 360deg  /* MediumPurple */
+            );
+        }
+
+        .arrow {
+            position: absolute;
+            top: -20px; /* Position above the wheel, pointing down */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            /* This creates the triangle/arrow shape */
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 30px solid #333; /* Dark arrow */
+            z-index: 10;
+        }
+
+        .peg-indicator {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #333;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5; /* Sits on top of the wheel, under the arrow */
+        }
+
+        /* This class is added by JavaScript to make the wheel spin */
+        .spinning {
+            transition: transform 4s cubic-bezier(0.2, 0.8, 0.7, 1); /* Slower, easing out */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Blame Game</h1>
+    <h2>click to spin and find out whose fault IT is</h2>
+
+    <div class="wheel-container" onclick="spinWheel()">
+        <div class="arrow"></div>
+        <div class="wheel" id="spinWheel">
+            </div>
+        <div class="peg-indicator"></div> 
+    </div>
+
+    <script>
+        const wheel = document.getElementById('spinWheel');
+        let isSpinning = false;
+        
+        // The 6 segments, in order of their appearance on the wheel (0-60deg, 60-120deg, etc.)
+        const segments = [
+            'Product Team',
+            'Tier 1 Support',
+            'Internet Outage',
+            'Not Enough Sleep',
+            'AWS is Down',
+            'Gremlins'
+        ];
+
+        function spinWheel() {
+            if (isSpinning) return; // Don't spin if already spinning
+            isSpinning = true;
+
+            // Reset any previous spin transform
+            wheel.style.transition = 'none';
+            wheel.style.transform = 'rotate(0deg)';
+            
+            // Force browser to apply the reset before starting the new transition
+            void wheel.offsetWidth; 
+
+            // 1. Determine target segment randomly
+            const randomIndex = Math.floor(Math.random() * segments.length);
+            const targetSegment = segments[randomIndex];
+
+            // 2. Calculate rotation for the target segment
+            // Each segment is 60 degrees (360 / 6).
+            // We want the arrow to land in the *middle* of the segment (e.g., at 30, 90, 150 deg)
+            const degreesPerSegment = 60;
+            const segmentMidpoint = degreesPerSegment / 2;
+            
+            // Calculate the target rotation
+            let degreesToLandOn = (randomIndex * degreesPerSegment) + segmentMidpoint;
+            
+            // This adjustment makes it so the *wheel* spins to this position,
+            // placing the segment under the static top arrow.
+            // We must spin *backwards* to align the segment.
+            degreesToLandOn = 360 - degreesToLandOn;
+
+
+            // 3. Add multiple full spins
+            const fullSpins = 5; 
+            const totalRotation = (fullSpins * 360) + degreesToLandOn;
+
+            // 4. Apply the spinning transition
+            wheel.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1.0)';
+            wheel.style.transform = `rotate(${totalRotation}deg)`;
+
+            // 5. After animation, show the result and re-enable spinning
+            wheel.addEventListener('transitionend', () => {
+                isSpinning = false;
+                
+                // Show the winner
+                alert(`It's... ${targetSegment}'s fault!`); 
+                
+                // This 'resets' the wheel angle without animation
+                // so the next spin starts from the new position
+                const currentRotation = totalRotation % 360;
+                wheel.style.transition = 'none';
+                wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+            }, { once: true }); // 'once: true' automatically removes the listener
+        }
+    </script>
+</body>
+</html>
