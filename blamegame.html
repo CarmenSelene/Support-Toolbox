@@ -5,17 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blame Game</title>
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f0f0;
+            overflow: hidden; /* Prevent scroll on zoom/flash */
+        }
+        
         body {
             display: flex;
-            flex-direction: column; /* Stack title and wheel vertically */
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f0f0f0;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden;
+            flex-direction: column;
             text-align: center;
+        }
+
+        header {
+            flex: 0 1 auto; /* Don't grow, shrink if needed */
+            padding-top: 20px; /* Pulls it closer to the top */
+        }
+
+        main {
+            flex: 1 1 auto; /* Takes up remaining space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Centers the wheel/result vertically in this space */
+            align-items: center;
+            width: 100%;
         }
 
         h1 {
@@ -29,13 +45,13 @@
             color: #555;
             font-weight: 400;
             margin-top: 0;
-            margin-bottom: 30px;
+            margin-bottom: 20px; /* Reduced margin */
         }
 
         .wheel-container {
             position: relative;
-            width: 300px; /* Size of the wheel */
-            height: 300px;
+            width: 400px; /* Made larger */
+            height: 400px; /* Made larger */
             cursor: pointer;
         }
 
@@ -48,22 +64,23 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.2);
             border: 5px solid #ccc;
             
-            /* This creates the 6-segment pie chart.
-              Each color gets an equal 60-degree slice (360 / 6 = 60).
+            /* This creates the 7-segment pie chart.
+              Each color gets an equal ~51.4-degree slice (360 / 7).
             */
             background: conic-gradient(
-                #FF6347 0deg 60deg,  /* Tomato */
-                #4682B4 60deg 120deg, /* SteelBlue */
-                #32CD32 120deg 180deg, /* LimeGreen */
-                #FFD700 180deg 240deg, /* Gold */
-                #FF4500 240deg 300deg, /* OrangeRed */
-                #9370DB 300deg 360deg  /* MediumPurple */
+                #FF6347 0deg 51.43deg,  /* Tomato */
+                #4682B4 51.43deg 102.86deg, /* SteelBlue */
+                #32CD32 102.86deg 154.29deg, /* LimeGreen */
+                #FFD700 154.29deg 205.71deg, /* Gold */
+                #FF4500 205.71deg 257.14deg, /* OrangeRed */
+                #9370DB 257.14deg 308.57deg, /* MediumPurple */
+                #00CED1 308.57deg 360deg  /* DarkTurquoise */
             );
         }
 
         .arrow {
             position: absolute;
-            top: -20px; /* Position above the wheel, pointing down */
+            top: 0; /* Sits on the top edge, pointing in */
             left: 50%;
             transform: translateX(-50%);
             width: 0;
@@ -71,98 +88,127 @@
             /* This creates the triangle/arrow shape */
             border-left: 20px solid transparent;
             border-right: 20px solid transparent;
-            border-bottom: 30px solid #333; /* Dark arrow */
+            border-bottom: 30px solid #333; /* Points DOWN into the chart */
             z-index: 10;
         }
 
-        .peg-indicator {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: #333;
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 5; /* Sits on top of the wheel, under the arrow */
-        }
+        /* The dot in the center has been removed. */
 
         /* This class is added by JavaScript to make the wheel spin */
         .spinning {
             transition: transform 4s cubic-bezier(0.2, 0.8, 0.7, 1); /* Slower, easing out */
         }
+
+        /* This div will show the result */
+        .result {
+            margin-top: 30px;
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+            min-height: 1.5em; /* Prevents layout shift */
+        }
+
+        /* This animation is added when a result is chosen */
+        .result.highlight {
+            animation: highlight-flash 0.8s ease-out;
+        }
+        
+        @keyframes highlight-flash {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.15); /* Pop effect */
+                color: #000;
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 <body>
 
-    <h1>Blame Game</h1>
-    <h2>click to spin and find out whose fault IT is</h2>
+    <header>
+        <h1>Blame Game</h1>
+        <h2>click to spin and find out whose fault IT is</h2>
+    </header>
 
-    <div class="wheel-container" onclick="spinWheel()">
-        <div class="arrow"></div>
-        <div class="wheel" id="spinWheel">
-            </div>
-        <div class="peg-indicator"></div> 
-    </div>
+    <main>
+        <div class="wheel-container" onclick="spinWheel()">
+            <div class="arrow"></div>
+            <div class="wheel" id="spinWheel">
+                </div>
+        </div>
+
+        <div id="result-display" class="result">Click to spin!</div>
+    </main>
 
     <script>
         const wheel = document.getElementById('spinWheel');
+        const resultDisplay = document.getElementById('result-display');
         let isSpinning = false;
         
-        // The 6 segments, in order of their appearance on the wheel (0-60deg, 60-120deg, etc.)
+        // The 7 segments, in order (0-~51.4deg, ~51.4-~102.8deg, etc.)
         const segments = [
             'Product Team',
             'Tier 1 Support',
             'Internet Outage',
-            'Not Enough Sleep',
+            'Reid',
             'AWS is Down',
-            'Gremlins'
+            'Zoom',
+            'Critically Low Caffeine'
         ];
 
         function spinWheel() {
-            if (isSpinning) return; // Don't spin if already spinning
+            if (isSpinning) return;
             isSpinning = true;
 
-            // Reset any previous spin transform
-            wheel.style.transition = 'none';
-            wheel.style.transform = 'rotate(0deg)';
+            // 1. Reset text and highlight
+            resultDisplay.textContent = 'Spinning...';
+            resultDisplay.classList.remove('highlight');
             
-            // Force browser to apply the reset before starting the new transition
+            // 2. Reset wheel spin for a new turn
+            wheel.style.transition = 'none';
+            const currentRotation = getComputedStyle(wheel).transform;
+            // This ensures the next spin doesn't just start from 0
+            if (currentRotation !== 'none') {
+                wheel.style.transform = currentRotation;
+            }
+            
+            // Force browser to apply the reset
             void wheel.offsetWidth; 
 
-            // 1. Determine target segment randomly
-            const randomIndex = Math.floor(Math.random() * segments.length);
+            // 3. Determine target segment randomly
+            const segmentsLength = segments.length;
+            const randomIndex = Math.floor(Math.random() * segmentsLength);
             const targetSegment = segments[randomIndex];
 
-            // 2. Calculate rotation for the target segment
-            // Each segment is 60 degrees (360 / 6).
-            // We want the arrow to land in the *middle* of the segment (e.g., at 30, 90, 150 deg)
-            const degreesPerSegment = 60;
+            // 4. Calculate rotation
+            const degreesPerSegment = 360 / segmentsLength;
             const segmentMidpoint = degreesPerSegment / 2;
             
             // Calculate the target rotation
             let degreesToLandOn = (randomIndex * degreesPerSegment) + segmentMidpoint;
             
-            // This adjustment makes it so the *wheel* spins to this position,
-            // placing the segment under the static top arrow.
-            // We must spin *backwards* to align the segment.
+            // Spin backwards to align the segment under the static top arrow
             degreesToLandOn = 360 - degreesToLandOn;
 
-
-            // 3. Add multiple full spins
+            // 5. Add multiple full spins
             const fullSpins = 5; 
             const totalRotation = (fullSpins * 360) + degreesToLandOn;
 
-            // 4. Apply the spinning transition
+            // 6. Apply the spinning transition
             wheel.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1.0)';
             wheel.style.transform = `rotate(${totalRotation}deg)`;
 
-            // 5. After animation, show the result and re-enable spinning
+            // 7. After animation, show the result and re-enable spinning
             wheel.addEventListener('transitionend', () => {
                 isSpinning = false;
                 
                 // Show the winner
-                alert(`It's... ${targetSegment}'s fault!`); 
+                resultDisplay.textContent = `It's... ${targetSegment}'s fault!`;
+                resultDisplay.classList.add('highlight'); // Add flash animation
                 
                 // This 'resets' the wheel angle without animation
                 // so the next spin starts from the new position
@@ -170,7 +216,7 @@
                 wheel.style.transition = 'none';
                 wheel.style.transform = `rotate(${currentRotation}deg)`;
 
-            }, { once: true }); // 'once: true' automatically removes the listener
+            }, { once: true });
         }
     </script>
 </body>
