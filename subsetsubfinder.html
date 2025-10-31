@@ -1,0 +1,252 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subset Sum Finder</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            text-align: center;
+            color: #111;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* Ensures padding doesn't affect width */
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #007aff;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 2rem;
+            border-top: 1px solid #eee;
+            padding-top: 1.5rem;
+        }
+        #results h2 {
+            margin-top: 0;
+        }
+        #results ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        #results li {
+            background-color: #f9f9f9;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .error {
+            color: #d9534f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="container">
+        <h1>Subset Sum Finder</h1>
+
+
+        <div class="input-group">
+            <label for="numbers">Input Values</label>
+            <input type="text" id="numbers" placeholder="e.g., 1, 2a, 3,, 4, -5c">
+        </div>
+
+
+        <div class="input-group">
+            <label for="target">Target Value</label>
+            <input type="number" id="target" placeholder="e.g., 5">
+        </div>
+
+
+        <button id="solveButton">Find Combinations</button>
+
+
+        <div id="results">
+            <h2>Solutions</h2>
+            <ul id="solutionsList">
+                </ul>
+        </div>
+    </div>
+
+
+    <script>
+        document.getElementById('solveButton').addEventListener('click', function() {
+            // 1. Get and clear UI elements
+            const resultsList = document.getElementById('solutionsList');
+            resultsList.innerHTML = ''; // Clear previous results
+
+
+            // 2. Parse Inputs
+            const numbersInput = document.getElementById('numbers').value;
+            const targetInput = document.getElementById('target').value;
+
+
+            // 3. Process Input 1: Find all numbers
+            // Use regex to find all number-like strings (e.g., -10, 5.5).
+            // This robustly ignores duplicate commas, spaces, and other text (e.g., "a", "b").
+            const numberRegex = /-?\d+(\.\d+)?/g;
+            const numberMatches = numbersInput.match(numberRegex);
+            
+            // Convert matched strings to numbers. If no matches, use an empty array.
+            const numbers = (numberMatches || []).map(Number);
+
+
+            // 4. Process Input 2: Target value
+            const target = parseFloat(targetInput);
+
+
+            // 5. Validation
+            if (isNaN(target)) {
+                displayError("Target value is not a valid number.");
+                return;
+            }
+            if (numbers.length === 0) {
+                displayError("No valid input numbers provided.");
+                return;
+            }
+
+
+            // 6. Core Logic: Find all combinations
+            const solutions = [];
+
+
+            /**
+             * Recursive backtracking function to find subsets.
+             * @param {number} startIndex - The index in the 'numbers' array to start checking from.
+             * @param {number} currentSum - The sum of the 'currentCombination' so far.
+             * @param {Array<number>} currentCombination - The subset being built in this path.
+             */
+            function findSubsets(startIndex, currentSum, currentCombination) {
+                // Check if precision errors are causing a mismatch
+                // Use a small epsilon for floating-point comparison
+                const epsilon = 1e-9;
+
+
+                // Base Case 1: Success
+                // We found a combination that sums exactly to the target
+                if (Math.abs(currentSum - target) < epsilon) {
+                    solutions.push([...currentCombination]); // Store a *copy*
+                    return; // Stop this path
+                }
+
+
+                // Base Case 2: Failure (Pruning)
+                // If sum is over target, or we are out of numbers, this path is invalid.
+                if (currentSum > target || startIndex === numbers.length) {
+                    return; // Stop this path
+                }
+
+
+                // Recursive Step: Iterate through remaining numbers
+                for (let i = startIndex; i < numbers.length; i++) {
+                    const num = numbers[i];
+                    
+                    // Only explore this path if adding the number doesn't go over the target
+                    // (Adjust check for negative targets)
+                    const newSum = currentSum + num;
+                    if ( (target >= 0 && newSum <= target + epsilon) || 
+                         (target < 0 && newSum >= target - epsilon) ||
+                         (target > 0 && num < 0) || // Allow adding negatives
+                         (target < 0 && num > 0) ) { // Allow adding positives to negative target
+                        
+                        // 1. Choose: Include numbers[i] in the combination
+                        currentCombination.push(num);
+                        
+                        // 2. Explore: Recurse, starting from the *next* index (i + 1)
+                        // This ensures each number is used only once per combination
+                        findSubsets(i + 1, newSum, currentCombination);
+                        
+                        // 3. Unchoose (Backtrack): Remove numbers[i] to try the next path
+                        currentCombination.pop();
+                    }
+                }
+            }
+
+
+            // Start the recursive process
+            findSubsets(0, 0, []);
+
+
+            // 7. Display Results
+            displaySolutions(solutions);
+        });
+
+
+        /**
+         * Renders the found solutions to the list.
+         * @param {Array<Array<number>>} solutions
+         */
+        function displaySolutions(solutions) {
+            const resultsList = document.getElementById('solutionsList');
+            if (solutions.length === 0) {
+                resultsList.innerHTML = '<li>No combinations found.</li>';
+                return;
+            }
+
+
+            solutions.forEach(combo => {
+                const li = document.createElement('li');
+                li.textContent = combo.join(' + ');
+                resultsList.appendChild(li);
+            });
+        }
+
+
+        /**
+         * Displays an error message in the results area.
+         * @param {string} message
+         */
+        function displayError(message) {
+            const resultsList = document.getElementById('solutionsList');
+            resultsList.innerHTML = `<li class="error">${message}</li>`;
+        }
+
+
+    </script>
+
+
+</body>
+</html>
