@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting Toolbox</title>
+    <style>
+        /* Basic page styling */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Large title styling */
+        h1 {
+            font-size: 3.5em; /* Large font size */
+            color: #333;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        /* Container for all the grid rows */
+        .grid-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* This is the row container you will copy-paste */
+        .grid-row {
+            display: grid;
+            /* Creates a 3-column grid */
+            grid-template-columns: repeat(3, 1fr); 
+            /* Adds spacing between the boxes */
+            gap: 20px; 
+            /* Adds spacing between this row and the next one you paste */
+            margin-bottom: 20px; 
+        }
+
+        /* Styling for each individual link box */
+        .tool-box {
+            display: block; /* Makes the <a> tag behave like a box */
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-decoration: none; /* Removes the link underline */
+            color: #333; /* Sets the text color */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        /* Add a subtle hover effect */
+        .tool-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Box title styling */
+        .tool-box h3 {
+            font-size: 1.5em;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #000;
+        }
+
+        /* Box description text styling */
+        .tool-box p {
+            font-size: 1em;
+            line-height: 1.4;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Troubleshooting Toolbox</h1>
+
+    <div class="grid-container">
+
+        <div class="grid-row">
+            
+            <a href="placeholder-link-1.html" class="tool-box">
+                <h3>Box Title 1</h3>
+                <p>This is the placeholder description for the first item. Fill in your details here.</p>
+            </a>
+            
+            <a href="placeholder-link-2.html" class="tool-box">
+                <h3>Box Title 2</h3>
+                <p>This is the placeholder description for the second item. Fill in your details here.</p>
+            </a>
+            
+            <a href="placeholder-link-3.html" class="tool-box">
+                <h3>Box Title 3</h3>
+                <p>This is the placeholder description for the third item. Fill in your details here.</p>
+            </a>
+
+        </div>
+        </div>
+
+</body>
+</html>
