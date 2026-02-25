@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenDesk Cue Refresh Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* MATCHING YOUR HOMEPAGE THEME */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { font-size: 2.5em; color: #333; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #555; margin-bottom: 40px; font-size: 1.1em; }
+
+        /* THE MACHINE CABINET */
+        .machine-cabinet {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .slot-container { 
+            display: flex; gap: 10px; padding: 15px; 
+            background: #eee; border-radius: 10px; border: 2px solid #ccc;
+            margin-bottom: 25px;
+        }
+
+        .window { 
+            width: 120px; height: 100px; background: white; 
+            overflow: hidden; position: relative; border-radius: 5px; border: 2px solid #ddd;
+        }
+
+        .reel { position: absolute; top: 0; width: 100%; }
+
+        .option { 
+            height: 100px; display: flex; align-items: center; justify-content: center; 
+            color: #333; font-weight: bold; font-size: 0.9em; text-align: center;
+            border-bottom: 1px solid #f0f0f0; box-sizing: border-box; text-transform: uppercase;
+        }
+
+        /* BUTTON MATCHING TOOL-BOX STYLE BUT RED */
+        button { 
+            background-color: #e63946;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px #900;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px #900; }
+        button:active { transform: translateY(2px); box-shadow: 0 2px #900; }
+        button:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; }
+
+        .back-link { margin-top: 30px; color: #555; text-decoration: none; font-size: 0.9em; }
+        .back-link:hover { text-decoration: underline; }
+
+        .win-glow { border-color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+    </style>
+</head>
+<body>
+
+    <h1>ZenDesk Cue Refresh Simulator</h1>
+    <p class="subtitle">Try your luck, right this way, win a terrible prize!</p>
+
+    <div class="machine-cabinet">
+        <div class="slot-container" id="machine">
+            <div class="window"><div class="reel" id="r1"></div></div>
+            <div class="window"><div class="reel" id="r2"></div></div>
+            <div class="window"><div class="reel" id="r3"></div></div>
+        </div>
+
+        <button id="btn" onclick="spin()">SPIN!</button>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to Toolbox</a>
+
+    <script>
+        const opts = ["easy ticket", "no tickets", "bluemoons", "outage"];
+        const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
+        const itemHeight = 100;
+
+        reels.forEach(reel => {
+            for(let i=0; i<40; i++) {
+                opts.forEach(text => {
+                    const d = document.createElement('div');
+                    d.className = 'option';
+                    d.innerText = text;
+                    reel.appendChild(d);
+                });
+            }
+        });
+
+        function spin() {
+            const btn = document.getElementById('btn');
+            const machine = document.getElementById('machine');
+            btn.disabled = true;
+            machine.classList.remove('win-glow');
+            
+            const winIdx = Math.floor(Math.random() * opts.length);
+            
+            reels.forEach((reel, i) => {
+                reel.style.transition = 'none';
+                reel.style.top = '0px';
+                
+                setTimeout(() => {
+                    const totalMove = (32 + winIdx) * itemHeight;
+                    const duration = 2 + (i * 0.7); 
+                    reel.style.transition = `top ${duration}s cubic-bezier(0.1, 0, 0.1, 1)`;
+                    reel.style.top = `-${totalMove}px`;
+                }, 50);
+            });
+
+            setTimeout(() => {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                machine.classList.add('win-glow');
+                btn.disabled = false;
+            }, 3600);
+        }
+    </script>
+</body>
+</html>
