@@ -15,10 +15,20 @@
 
         /* Large title styling */
         h1 {
-            font-size: 3.5em; /* Large font size */
+            font-size: 3.5em;
             color: #333;
             text-align: center;
             margin-bottom: 40px;
+        }
+
+        /* Section headers */
+        h2 {
+            font-size: 2em;
+            color: #444;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 20px;
         }
 
         /* Container for all the grid rows */
@@ -27,26 +37,23 @@
             margin: 0 auto;
         }
 
-        /* This is the row container you will copy-paste */
+        /* Grid row layout */
         .grid-row {
             display: grid;
-            /* Creates a 3-column grid */
             grid-template-columns: repeat(3, 1fr); 
-            /* Adds spacing between the boxes */
             gap: 20px; 
-            /* Adds spacing between this row and the next one you paste */
             margin-bottom: 20px; 
         }
 
         /* Styling for each individual link box */
         .tool-box {
-            display: block; /* Makes the <a> tag behave like a box */
+            display: block;
             background-color: #ffffff;
             border: 1px solid #ddd;
             border-radius: 8px;
             padding: 20px;
-            text-decoration: none; /* Removes the link underline */
-            color: #333; /* Sets the text color */
+            text-decoration: none;
+            color: #333;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             transition: transform 0.2s, box-shadow 0.2s;
         }
@@ -78,40 +85,44 @@
     <h1>Troubleshooting Toolbox</h1>
 
     <div class="grid-container">
-    <div class="grid-row">
-        <a href="subsetsubfinder.html" class="tool-box">
-            <h3>Numerical Subset Finder</h3>
-            <p>Supply a target value and multiple possible values that might add up. Used to find nested discrepancies.</p>
-        </a>
         
-        <a href="blamegame.html" class="tool-box">
-            <h3>Blame Game</h3>
-            <p>Whose fault is it?</p>
-        </a>
-        
-        <a href="phone-game.html" class="tool-box">
-            <h3>Support Line Simulator</h3>
-            <p>Pick up the phone to hear from a "valued" customer. Will they be happy, or will they melt your browser?</p>
-        </a>
-    </div>
+        <h2>Actual Tools</h2>
+        <div class="grid-row">
+            <a href="subsetsubfinder.html" class="tool-box">
+                <h3>Numerical Subset Finder</h3>
+                <p>Supply a target value and multiple possible values that might add up. Used to find nested discrepancies.</p>
+            </a>
+            
+            <a href="variant-family-json-parse.html" class="tool-box">
+                <h3>Variant Family JSON Parse Tool</h3>
+                <p>Paste a Lightspeed product family payload to extract unique variant attributes and calculate total possible matrix combinations.</p>
+            </a>
+            
+            <a href="#" class="tool-box">
+                <h3>Coming Soon...</h3>
+                <p>The next diagnostic tool is currently under development.</p>
+            </a>
+        </div>
 
-    <div class="grid-row">
-        <a href="slot-machine.html" class="tool-box">
-            <h3>ZenDesk Cue Refresh Simulator</h3>
-            <p>Try your luck, right this way, win a terrible prize! A high-stakes simulation of the daily ticket grind.</p>
-        </a>
-        
-        <a href="#" class="tool-box">
-            <h3>Coming Soon...</h3>
-            <p>This is the placeholder description for the next item.</p>
-        </a>
+        <h2>Having Fun</h2>
+        <div class="grid-row">
+            <a href="blamegame.html" class="tool-box">
+                <h3>Blame Game</h3>
+                <p>Whose fault is it? Spin the wheel to determine where the finger should be pointed.</p>
+            </a>
+            
+            <a href="phone-game.html" class="tool-box">
+                <h3>Support Line Simulator</h3>
+                <p>Pick up the phone to hear from a "valued" customer. Will they be happy, or will they melt your browser?</p>
+            </a>
 
-        <a href="#" class="tool-box">
-            <h3>Coming Soon...</h3>
-            <p>This is the placeholder description for the next item.</p>
-        </a>
+            <a href="slot-machine.html" class="tool-box">
+                <h3>ZenDesk Queue Refresh Simulator</h3>
+                <p>Try your luck, right this way, win a terrible prize! A high-stakes simulation of the daily ticket grind.</p>
+            </a>
+        </div>
+
     </div>
-</div>
 
 </body>
 </html>
