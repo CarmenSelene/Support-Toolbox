@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lightspeed Family Matrix Calculator</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f4f7f9; color: #333; line-height: 1.6; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: #007ace; margin-top: 0; border-bottom: 2px solid #eef2f5; padding-bottom: 10px; }
+        textarea { width: 100%; height: 180px; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-family: 'Courier New', monospace; box-sizing: border-box; font-size: 13px; resize: vertical; }
+        button { background: #007ace; color: white; border: none; padding: 14px 28px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 15px; transition: background 0.2s; }
+        button:hover { background: #005fa3; }
+        #summary { margin-top: 25px; padding: 20px; background: #e7f3ff; border-radius: 8px; border-left: 5px solid #007ace; display: none; }
+        #summary h3 { margin: 0 0 10px 0; font-size: 1.2em; color: #005fa3; }
+        .total-number { font-size: 1.8em; font-weight: bold; color: #333; }
+        .attr-card { border: 1px solid #eef2f5; padding: 15px; border-radius: 8px; margin-top: 15px; background: #fafbfc; }
+        .attr-header { font-weight: bold; color: #007ace; text-transform: uppercase; font-size: 0.9em; letter-spacing: 0.5px; margin-bottom: 5px; }
+        .attr-values { font-size: 1em; color: #444; word-wrap: break-word; }
+        .error { color: #d32f2f; background: #ffebee; padding: 12px; border-radius: 6px; margin-top: 15px; display: none; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Lightspeed Variant Family Calculator</h2>
+        <p>Paste your API JSON response (the product family) below:</p>
+        <textarea id="jsonInput" placeholder="Paste data.variants JSON here..."></textarea>
+        <button onclick="processData()">Calculate Combinations</button>
+        
+        <div id="errorMsg" class="error"></div>
+
+        <div id="summary">
+            <h3>Mathematical Result</h3>
+            <div id="mathBreakdown"></div>
+            <p>Total Possible Combinations:</p>
+            <div id="totalResult" class="total-number"></div>
+        </div>
+
+        <div id="attributeList"></div>
+    </div>
+
+    <script>
+        function processData() {
+            const input = document.getElementById('jsonInput').value.trim();
+            const errorDiv = document.getElementById('errorMsg');
+            const summaryDiv = document.getElementById('summary');
+            const attrDiv = document.getElementById('attributeList');
+            const mathDiv = document.getElementById('mathBreakdown');
+            const totalDiv = document.getElementById('totalResult');
+
+            // Reset UI
+            errorDiv.style.display = 'none';
+            summaryDiv.style.display = 'none';
+            attrDiv.innerHTML = '';
+            
+            if (!input) return;
+
+            try {
+                const json = JSON.parse(input);
+                // Handle various Lightspeed nesting levels
+                const variants = json.data?.variants || json.variants || (Array.isArray(json) ? json : null);
+
+                if (!variants || !Array.isArray(variants)) {
+                    throw new Error("Could not find the 'variants' array. Please paste the full response.");
+                }
+
+                const matrix = {};
+
+                // Extraction Logic
+                variants.forEach(v => {
+                    const defs = v.variant_definitions || v.variant_options;
+                    if (defs && Array.isArray(defs)) {
+                        defs.forEach(d => {
+                            if (!matrix[d.name]) matrix[d.name] = new Set();
+                            if (d.value !== undefined && d.value !== null) {
+                                matrix[d.name].add(d.value);
+                            }
+                        });
+                    }
+                });
+
+                const attrNames = Object.keys(matrix);
+                if (attrNames.length === 0) {
+                    throw new Error("No variant attributes (Color, Size, etc.) found in the data.");
+                }
+
+                // Math Logic
+                let total = 1;
+                let mathString = "";
+                
+                attrNames.forEach((name, index) => {
+                    const count = matrix[name].size;
+                    total *= count;
+                    
+                    // Build UI for Attributes
+                    const card = document.createElement('div');
+                    card.className = 'attr-card';
+                    card.innerHTML = `
+                        <div class="attr-header">Attribute: ${name} (${count} values)</div>
+                        <div class="attr-values">${Array.from(matrix[name]).sort().join(', ')}</div>
+                    `;
+                    attrDiv.appendChild(card);
+
+                    // Build Math String
+                    mathString += `${count}${index < attrNames.length - 1 ? ' × ' : ''}`;
+                });
+
+                // Display Results
+                mathDiv.innerHTML = `<b>Calculation:</b> ${mathString}`;
+                totalDiv.innerText = total.toLocaleString();
+                summaryDiv.style.display = 'block';
+
+            } catch (e) {
+                errorDiv.innerText = "Invalid Data: " + e.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
