@@ -14,6 +14,7 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* RESET BUTTON */
@@ -28,6 +29,7 @@
             cursor: pointer;
             font-size: 0.8em;
             text-transform: uppercase;
+            z-index: 100;
         }
         .reset-btn:hover { background: #ccc; }
 
@@ -36,22 +38,22 @@
 
         /* THE COMPUTER SCREEN */
         .computer-cabinet {
-            background-color: #333; /* Dark frame */
+            background-color: #333;
             border: 10px solid #444;
             border-radius: 10px;
             width: 350px;
-            height: 250px;
+            height: 220px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 50px;
+            margin-bottom: 80px;
             position: relative;
         }
 
         #screen-display {
-            background-color: #9db2bf; /* Retro LCD color */
+            background-color: #9db2bf;
             width: 90%;
             height: 80%;
             border-radius: 5px;
@@ -63,15 +65,18 @@
             font-family: 'Courier New', Courier, monospace;
             padding: 10px;
             box-sizing: border-box;
+            transition: background-color 0.3s;
         }
 
-        .status-text { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
-        .coffee-icon { width: 60px; height: 60px; display: none; }
+        .status-text { font-size: 1.4em; font-weight: bold; }
 
-        /* HUMANS AREA */
+        /* HUMANS AREA - SPACED OUT */
         .humans-container {
             display: flex;
-            gap: 40px;
+            gap: 100px; /* Increased spacing */
+            justify-content: center;
+            align-items: flex-end;
+            padding-top: 20px;
         }
 
         .human-wrapper {
@@ -79,22 +84,21 @@
             flex-direction: column;
             align-items: center;
             position: relative;
-            cursor: pointer;
         }
 
-        .human-svg { width: 80px; height: 100px; transition: transform 0.1s; }
-        .human-wrapper:hover .human-svg { transform: translateY(-5px); }
+        .human-svg { width: 70px; height: 90px; }
 
-        /* SPEECH BUBBLE */
+        /* SPEECH BUBBLE - Adjusted to not overlap */
         .speech-bubble {
             position: absolute;
-            top: -70px;
+            top: -65px;
             background: #fff;
             border: 2px solid #333;
             border-radius: 10px;
-            padding: 5px 10px;
-            font-size: 0.7em;
+            padding: 6px 10px;
+            font-size: 0.75em;
             white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .speech-bubble::after {
             content: '';
@@ -108,18 +112,41 @@
         }
 
         .give-btn {
-            margin-top: 10px;
+            margin-top: 15px;
             background: #4caf50;
             color: white;
             border: none;
-            padding: 5px 15px;
+            padding: 8px 20px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            transition: transform 0.1s;
         }
-        .give-btn:hover { background: #45a049; }
+        .give-btn:active { transform: scale(0.95); }
+        .give-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        .back-link { margin-top: auto; padding-top: 40px; color: #555; text-decoration: none; font-size: 0.9em; }
+        /* COFFEE ICON STYLING */
+        .coffee-icon { width: 40px; height: 40px; }
+
+        /* HELD COFFEE (next to human) */
+        .held-coffee {
+            position: absolute;
+            right: -35px;
+            bottom: 50px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .held-coffee.visible { opacity: 1; }
+
+        /* FLYING COFFEE ANIMATION */
+        .flying-coffee {
+            position: fixed;
+            z-index: 99;
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+        }
+
+        .back-link { margin-top: 60px; color: #555; text-decoration: none; font-size: 0.9em; }
         .back-link:hover { text-decoration: underline; }
     </style>
 </head>
@@ -130,86 +157,111 @@
     <h1>May I haz free coffee?</h1>
     <p class="subtitle">ONE PER DAY ONLY</p>
 
-    <div class="computer-cabinet">
+    <div class="computer-cabinet" id="dispenser">
         <div id="screen-display">
-            <div id="status" class="status-text">SYSTEM READY</div>
-            <svg id="coffee-img" class="coffee-icon" viewBox="0 0 100 100">
-                <path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" />
-                <path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" />
-                <path d="M40,20 Q45,30 40,35 M50,15 Q55,25 50,30 M60,20 Q65,30 60,35" fill="none" stroke="#999" stroke-width="2" />
-            </svg>
+            <div id="status" class="status-text">READY TO SERVE</div>
         </div>
     </div>
 
     <div class="humans-container">
-        <div class="human-wrapper" onclick="dispense(1)">
+        <div class="human-wrapper" id="human-1">
             <div class="speech-bubble">May I haz free coffee?</div>
+            <div class="held-coffee" id="cup-1">
+                <svg class="coffee-icon" viewBox="0 0 100 100"><path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" /><path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" /></svg>
+            </div>
             <svg class="human-svg" viewBox="0 0 100 100">
                 <circle cx="50" cy="30" r="15" fill="#333" />
                 <path d="M50,45 L50,80 M30,60 L70,60 M35,100 L50,80 L65,100" stroke="#333" stroke-width="4" fill="none" />
             </svg>
-            <button class="give-btn">Give</button>
+            <button class="give-btn" onclick="handleGive(1)">Give</button>
         </div>
 
-        <div class="human-wrapper" onclick="dispense(2)">
+        <div class="human-wrapper" id="human-2">
             <div class="speech-bubble">May I haz free coffee?</div>
+            <div class="held-coffee" id="cup-2">
+                <svg class="coffee-icon" viewBox="0 0 100 100"><path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" /><path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" /></svg>
+            </div>
             <svg class="human-svg" viewBox="0 0 100 100">
                 <circle cx="50" cy="30" r="15" fill="#333" />
                 <path d="M50,45 L50,80 M30,60 L70,60 M35,100 L50,80 L65,100" stroke="#333" stroke-width="4" fill="none" />
             </svg>
-            <button class="give-btn">Give</button>
+            <button class="give-btn" onclick="handleGive(2)">Give</button>
         </div>
 
-        <div class="human-wrapper" onclick="dispense(3)">
+        <div class="human-wrapper" id="human-3">
             <div class="speech-bubble">May I haz free coffee?</div>
+            <div class="held-coffee" id="cup-3">
+                <svg class="coffee-icon" viewBox="0 0 100 100"><path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" /><path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" /></svg>
+            </div>
             <svg class="human-svg" viewBox="0 0 100 100">
                 <circle cx="50" cy="30" r="15" fill="#333" />
                 <path d="M50,45 L50,80 M30,60 L70,60 M35,100 L50,80 L65,100" stroke="#333" stroke-width="4" fill="none" />
             </svg>
-            <button class="give-btn">Give</button>
+            <button class="give-btn" onclick="handleGive(3)">Give</button>
         </div>
     </div>
 
     <a href="index.html" class="back-link">← Back to Toolbox</a>
 
     <script>
-        let coffeeStock = {
-            1: true,
-            2: true,
-            3: true
-        };
+        let coffeeStock = { 1: true, 2: true, 3: true };
 
-        function dispense(humanId) {
+        function handleGive(id) {
             const status = document.getElementById('status');
-            const img = document.getElementById('coffee-img');
             const screen = document.getElementById('screen-display');
-
-            if (coffeeStock[humanId]) {
-                // First time
+            
+            if (coffeeStock[id]) {
+                // Success
                 status.innerText = "FREE COFFEE";
-                status.style.color = "#1b4332";
-                img.style.display = "block";
                 screen.style.backgroundColor = "#95d5b2";
-                coffeeStock[humanId] = false;
+                
+                animateCoffee(id);
+                coffeeStock[id] = false;
             } else {
-                // Second time
+                // Denied
                 status.innerText = "NO MORE FOR U!!!";
-                status.style.color = "#780000";
-                img.style.display = "none";
                 screen.style.backgroundColor = "#ff8787";
             }
         }
 
+        function animateCoffee(id) {
+            const dispenser = document.getElementById('dispenser');
+            const targetCup = document.getElementById(`cup-${id}`);
+            
+            // Create flying cup
+            const flyingCup = document.createElement('div');
+            flyingCup.className = 'flying-coffee';
+            flyingCup.innerHTML = `<svg class="coffee-icon" viewBox="0 0 100 100"><path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" /><path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" /></svg>`;
+            
+            // Start position (center of screen)
+            const startRect = dispenser.getBoundingClientRect();
+            flyingCup.style.left = (startRect.left + startRect.width/2 - 20) + 'px';
+            flyingCup.style.top = (startRect.top + startRect.height/2 - 20) + 'px';
+            
+            document.body.appendChild(flyingCup);
+
+            // Target position (where the held cup will appear)
+            const targetRect = targetCup.getBoundingClientRect();
+
+            // Trigger animation
+            setTimeout(() => {
+                flyingCup.style.left = targetRect.left + 'px';
+                flyingCup.style.top = targetRect.top + 'px';
+                flyingCup.style.transform = 'rotate(360deg) scale(1.2)';
+            }, 10);
+
+            // Cleanup and show held cup
+            setTimeout(() => {
+                targetCup.classList.add('visible');
+                flyingCup.remove();
+            }, 610);
+        }
+
         function resetGame() {
             coffeeStock = { 1: true, 2: true, 3: true };
-            const status = document.getElementById('status');
-            const img = document.getElementById('coffee-img');
-            const screen = document.getElementById('screen-display');
-            
-            status.innerText = "SYSTEM READY";
-            status.style.color = "#333";
-            img.style.display = "none";
-            screen.style.backgroundColor = "#9db2bf";
+            document.getElementById('status').innerText = "READY TO SERVE";
+            document.getElementById('screen-display').style.backgroundColor = "#9db2bf";
+            document.querySelectorAll('.held-coffee').forEach(cup => cup.classList.remove('visible'));
         }
     </script>
 </body>
