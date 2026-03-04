@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Entitlement Simulator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* RESET BUTTON */
+        .reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            background: #ddd;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+        .reset-btn:hover { background: #ccc; }
+
+        h1 { font-size: 2.5em; color: #333; margin-bottom: 5px; text-align: center; }
+        .subtitle { color: #555; margin-bottom: 40px; font-size: 1.1em; font-weight: bold; }
+
+        /* THE COMPUTER SCREEN */
+        .computer-cabinet {
+            background-color: #333; /* Dark frame */
+            border: 10px solid #444;
+            border-radius: 10px;
+            width: 350px;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        #screen-display {
+            background-color: #9db2bf; /* Retro LCD color */
+            width: 90%;
+            height: 80%;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .status-text { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
+        .coffee-icon { width: 60px; height: 60px; display: none; }
+
+        /* HUMANS AREA */
+        .humans-container {
+            display: flex;
+            gap: 40px;
+        }
+
+        .human-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .human-svg { width: 80px; height: 100px; transition: transform 0.1s; }
+        .human-wrapper:hover .human-svg { transform: translateY(-5px); }
+
+        /* SPEECH BUBBLE */
+        .speech-bubble {
+            position: absolute;
+            top: -70px;
+            background: #fff;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 5px 10px;
+            font-size: 0.7em;
+            white-space: nowrap;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: #333 transparent;
+            margin-left: -10px;
+        }
+
+        .give-btn {
+            margin-top: 10px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .give-btn:hover { background: #45a049; }
+
+        .back-link { margin-top: auto; padding-top: 40px; color: #555; text-decoration: none; font-size: 0.9em; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <button class="reset-btn" onclick="resetGame()">Reset Game</button>
+
+    <h1>May I haz free coffee?</h1>
+    <p class="subtitle">ONE PER DAY ONLY</p>
+
+    <div class="computer-cabinet">
+        <div id="screen-display">
+            <div id="status" class="status-text">SYSTEM READY</div>
+            <svg id="coffee-img" class="coffee-icon" viewBox="0 0 100 100">
+                <path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" />
+                <path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" />
+                <path d="M40,20 Q45,30 40,35 M50,15 Q55,25 50,30 M60,20 Q65,30 60,35" fill="none" stroke="#999" stroke-width="2" />
+            </svg>
+        </div>
+    </div>
+
+    <div class="humans-container">
+        <div class="human-wrapper" onclick="dispense(1)">
+            <div class="speech-bubble">May I haz free coffee?</div>
+            <svg class="human-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="30" r="15" fill="#333" />
+                <path d="M50,45 L50,80 M30,60 L70,60 M35,100 L50,80 L65,100" stroke="#333" stroke-width="4" fill="none" />
+            </svg>
+            <button class="give-btn">Give</button>
+        </div>
+
+        <div class="human-wrapper" onclick="dispense(2)">
+            <div class="speech-bubble">May I haz free coffee?</div>
+            <svg class="human-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="30" r="15" fill="#333" />
+                <path d="M50,45 L50,80 M30,60 L70,60 M35,100 L50,80 L65,100" stroke="#333" stroke-width="4" fill="none" />
+            </svg>
+            <button class="give-btn">Give</button>
+        </div>
+
+        <div class="human-wrapper" onclick="dispense(3)">
+            <div class="speech-bubble">May I haz free coffee?</div>
+            <svg class="human-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="30" r="15" fill="#333" />
+                <path d="M50,45 L50,80 M30,60 L70,60 M35,100 L50,80 L65,100" stroke="#333" stroke-width="4" fill="none" />
+            </svg>
+            <button class="give-btn">Give</button>
+        </div>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to Toolbox</a>
+
+    <script>
+        let coffeeStock = {
+            1: true,
+            2: true,
+            3: true
+        };
+
+        function dispense(humanId) {
+            const status = document.getElementById('status');
+            const img = document.getElementById('coffee-img');
+            const screen = document.getElementById('screen-display');
+
+            if (coffeeStock[humanId]) {
+                // First time
+                status.innerText = "FREE COFFEE";
+                status.style.color = "#1b4332";
+                img.style.display = "block";
+                screen.style.backgroundColor = "#95d5b2";
+                coffeeStock[humanId] = false;
+            } else {
+                // Second time
+                status.innerText = "NO MORE FOR U!!!";
+                status.style.color = "#780000";
+                img.style.display = "none";
+                screen.style.backgroundColor = "#ff8787";
+            }
+        }
+
+        function resetGame() {
+            coffeeStock = { 1: true, 2: true, 3: true };
+            const status = document.getElementById('status');
+            const img = document.getElementById('coffee-img');
+            const screen = document.getElementById('screen-display');
+            
+            status.innerText = "SYSTEM READY";
+            status.style.color = "#333";
+            img.style.display = "none";
+            screen.style.backgroundColor = "#9db2bf";
+        }
+    </script>
+</body>
+</html>
