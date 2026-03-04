@@ -73,7 +73,7 @@
         /* HUMANS AREA - SPACED OUT */
         .humans-container {
             display: flex;
-            gap: 100px; /* Increased spacing */
+            gap: 100px;
             justify-content: center;
             align-items: flex-end;
             padding-top: 20px;
@@ -88,7 +88,6 @@
 
         .human-svg { width: 70px; height: 90px; }
 
-        /* SPEECH BUBBLE - Adjusted to not overlap */
         .speech-bubble {
             position: absolute;
             top: -65px;
@@ -120,15 +119,17 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: transform 0.1s;
+            transition: all 0.1s;
         }
         .give-btn:active { transform: scale(0.95); }
-        .give-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .give-btn:disabled { 
+            background: #ccc; 
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
 
-        /* COFFEE ICON STYLING */
         .coffee-icon { width: 40px; height: 40px; }
 
-        /* HELD COFFEE (next to human) */
         .held-coffee {
             position: absolute;
             right: -35px;
@@ -138,7 +139,6 @@
         }
         .held-coffee.visible { opacity: 1; }
 
-        /* FLYING COFFEE ANIMATION */
         .flying-coffee {
             position: fixed;
             z-index: 99;
@@ -205,52 +205,59 @@
 
     <script>
         let coffeeStock = { 1: true, 2: true, 3: true };
+        let isBusy = false; // Flag to prevent rapid clicks
 
         function handleGive(id) {
+            if (isBusy) return;
+            isBusy = true;
+
             const status = document.getElementById('status');
             const screen = document.getElementById('screen-display');
+            const buttons = document.querySelectorAll('.give-btn');
+
+            // Disable buttons during transition
+            buttons.forEach(btn => btn.disabled = true);
             
             if (coffeeStock[id]) {
-                // Success
                 status.innerText = "FREE COFFEE";
                 screen.style.backgroundColor = "#95d5b2";
-                
                 animateCoffee(id);
                 coffeeStock[id] = false;
             } else {
-                // Denied
                 status.innerText = "NO MORE FOR U!!!";
                 screen.style.backgroundColor = "#ff8787";
             }
+
+            // Reset screen after 2 seconds
+            setTimeout(() => {
+                status.innerText = "READY TO SERVE";
+                screen.style.backgroundColor = "#9db2bf";
+                buttons.forEach(btn => btn.disabled = false);
+                isBusy = false;
+            }, 2000);
         }
 
         function animateCoffee(id) {
             const dispenser = document.getElementById('dispenser');
             const targetCup = document.getElementById(`cup-${id}`);
             
-            // Create flying cup
             const flyingCup = document.createElement('div');
             flyingCup.className = 'flying-coffee';
             flyingCup.innerHTML = `<svg class="coffee-icon" viewBox="0 0 100 100"><path d="M30,40 L70,40 L65,80 L35,80 Z" fill="#6F4E37" /><path d="M70,45 C80,45 80,60 70,60" fill="none" stroke="#6F4E37" stroke-width="5" /></svg>`;
             
-            // Start position (center of screen)
             const startRect = dispenser.getBoundingClientRect();
             flyingCup.style.left = (startRect.left + startRect.width/2 - 20) + 'px';
             flyingCup.style.top = (startRect.top + startRect.height/2 - 20) + 'px';
             
             document.body.appendChild(flyingCup);
-
-            // Target position (where the held cup will appear)
             const targetRect = targetCup.getBoundingClientRect();
 
-            // Trigger animation
             setTimeout(() => {
                 flyingCup.style.left = targetRect.left + 'px';
                 flyingCup.style.top = targetRect.top + 'px';
                 flyingCup.style.transform = 'rotate(360deg) scale(1.2)';
             }, 10);
 
-            // Cleanup and show held cup
             setTimeout(() => {
                 targetCup.classList.add('visible');
                 flyingCup.remove();
@@ -259,9 +266,11 @@
 
         function resetGame() {
             coffeeStock = { 1: true, 2: true, 3: true };
+            isBusy = false;
             document.getElementById('status').innerText = "READY TO SERVE";
             document.getElementById('screen-display').style.backgroundColor = "#9db2bf";
             document.querySelectorAll('.held-coffee').forEach(cup => cup.classList.remove('visible'));
+            document.querySelectorAll('.give-btn').forEach(btn => btn.disabled = false);
         }
     </script>
 </body>
