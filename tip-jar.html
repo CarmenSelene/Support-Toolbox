@@ -20,7 +20,7 @@
             max-width: 600px;
             width: 100%;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 2.5rem;
             background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -29,14 +29,14 @@
         h1 { color: #111; margin-bottom: 0.5rem; }
         p { color: #666; margin-bottom: 2rem; }
 
-        /* Jar and Coin Area */
         .stage {
             position: relative;
-            height: 300px;
+            height: 350px;
             background: #fff;
             border-bottom: 4px solid #ddd;
             overflow: hidden;
-            cursor: default;
+            border-radius: 4px;
+            margin-bottom: 1rem;
         }
 
         #jar-svg {
@@ -44,16 +44,16 @@
             bottom: 10px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 2;
-            pointer-events: none; /* Let clicks pass through to coins if needed */
+            z-index: 10;
+            pointer-events: none;
         }
 
         .coin {
             position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #ffd700;
-            border: 3px solid #b8860b;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #ffd700, #ffae00);
+            border: 2px solid #b8860b;
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -61,59 +61,69 @@
             font-weight: bold;
             color: #b8860b;
             cursor: pointer;
-            transition: transform 0.1s;
-            z-index: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 5;
             user-select: none;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
 
         .coin:hover {
-            transform: scale(1.1);
-            background: #ffec8b;
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
 
         .coin.in-jar {
             pointer-events: none;
+            z-index: 1;
             transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .counter {
-            margin-top: 1rem;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #007aff;
+            margin-top: 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #28a745;
         }
 
         button {
             margin-top: 1.5rem;
-            padding: 0.5rem 1rem;
-            border: none;
-            background: #eee;
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #ccc;
+            background: #fff;
             border-radius: 4px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #f0f0f0;
+            border-color: #999;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Tip Jar</h1>
-        <p>Your hard work is appreciated. Click the coins to "collect" your bonus.</p>
+        <h1>The Invisible Tip Jar</h1>
+        <p>A simulation of "Exposure" and "Great Job!" rewards. Click the coins to deposit them.</p>
 
         <div class="stage" id="stage">
-            <svg id="jar-svg" width="140" height="180" viewBox="0 0 140 180">
+            <svg id="jar-svg" width="160" height="200" viewBox="0 0 140 180">
                 <path d="M20,40 Q20,20 40,20 L100,20 Q120,20 120,40 L130,150 Q130,170 110,170 L30,170 Q10,170 10,150 Z" 
-                      fill="rgba(200, 230, 255, 0.2)" stroke="#aab" stroke-width="3"/>
-                <path d="M35,40 L35,140" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-                <rect x="40" y="80" width="60" height="40" rx="5" fill="white" stroke="#ccc" />
-                <text x="70" y="105" font-size="12" text-anchor="middle" fill="#999" font-family="Arial">TIPS</text>
+                      fill="rgba(220, 240, 255, 0.25)" stroke="#aab" stroke-width="2"/>
+                <path d="M30,45 L30,130" stroke="white" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
+                <rect x="35" y="85" width="70" height="35" rx="3" fill="white" stroke="#ddd" />
+                <text x="70" y="107" font-size="11" text-anchor="middle" fill="#666" font-family="Arial" font-weight="bold">TIPS</text>
             </svg>
         </div>
 
-        <div class="counter">Total Earnings: $<span id="total">0.00</span></div>
-        <button onclick="resetCoins()">Reset Empty Promises</button>
+        <div class="counter">Total Bonus: $<span id="total">0.00</span></div>
+        <button onclick="resetApp()">Refresh Disappointments</button>
     </div>
 
-    <audio id="clink-sound" src="https://assets.mixkit.co/active_storage/sfx/2005/2005-preview.mp3" preload="auto"></audio>
+    <audio id="clink-sound" src="https://assets.mixkit.co/active_storage/sfx/2012/2012-preview.mp3" preload="auto"></audio>
 
     <script>
         const stage = document.getElementById('stage');
@@ -126,48 +136,53 @@
             coin.className = 'coin';
             coin.innerText = '$';
             
-            // Randomly scatter coins around the jar
-            const side = Math.random() > 0.5 ? 'left' : 'right';
-            const x = side === 'left' ? (Math.random() * 80) : (window.innerWidth > 600 ? 450 + Math.random() * 80 : 250 + Math.random() * 50);
-            const y = 200 + Math.random() * 50;
+            // Generate coins strictly outside the jar area (left or right sides)
+            const isLeft = Math.random() > 0.5;
+            const xPos = isLeft ? 
+                         (Math.random() * 80 + 20) : 
+                         (stage.offsetWidth - 120 + Math.random() * 80);
+            
+            const yPos = Math.random() * 150 + 50;
 
-            coin.style.left = `${Math.random() * 80 + (side === 'left' ? 10 : 250)}px`;
-            coin.style.top = `${y}px`;
+            coin.style.left = `${xPos}px`;
+            coin.style.top = `${yPos}px`;
 
             coin.onclick = () => deposit(coin);
             stage.appendChild(coin);
         }
 
         function deposit(coin) {
-            // Play sound
+            // Sound effect
             clinkSound.currentTime = 0;
             clinkSound.play();
 
-            // Animate into jar
             coin.classList.add('in-jar');
             
-            // Center of jar logic
-            const jarX = 70; // middle of 140 width jar
-            const randomInnerX = (Math.random() * 60) + 40; // stay within jar walls
-            const randomInnerY = (Math.random() * 40) + 120; // stay at bottom of jar
+            // Move to bottom of jar
+            // Jar is centered at 50%, roughly 140px wide.
+            const randomInnerX = (Math.random() * 60) - 30; // offset from center
+            const randomInnerY = (Math.random() * 30) + 125; // bottom area
 
-            coin.style.left = `calc(50% - 20px + ${(Math.random() - 0.5) * 40}px)`;
+            coin.style.left = `calc(50% + ${randomInnerX}px - 22px)`;
             coin.style.top = `${randomInnerY}px`;
-            coin.style.transform = `rotate(${Math.random() * 360}deg)`;
+            coin.style.transform = `rotate(${(Math.random() - 0.5) * 40}deg)`;
 
             total += 0.25;
             totalDisplay.innerText = total.toFixed(2);
         }
 
-        function resetCoins() {
+        function resetApp() {
             stage.querySelectorAll('.coin').forEach(c => c.remove());
             total = 0;
             totalDisplay.innerText = "0.00";
-            for(let i=0; i<8; i++) createCoin();
+            // Spawn 6 initial coins
+            for(let i=0; i<6; i++) {
+                setTimeout(createCoin, i * 100);
+            }
         }
 
-        // Initialize coins
-        for(let i=0; i<8; i++) createCoin();
+        // Initialize with coins scattered outside the empty jar
+        resetApp();
     </script>
 </body>
 </html>
