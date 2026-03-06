@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Invisible Tip Jar</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        h1 { color: #111; margin-bottom: 0.5rem; }
+        p { color: #666; margin-bottom: 2rem; }
+
+        /* Jar and Coin Area */
+        .stage {
+            position: relative;
+            height: 300px;
+            background: #fff;
+            border-bottom: 4px solid #ddd;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        #jar-svg {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            pointer-events: none; /* Let clicks pass through to coins if needed */
+        }
+
+        .coin {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #ffd700;
+            border: 3px solid #b8860b;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #b8860b;
+            cursor: pointer;
+            transition: transform 0.1s;
+            z-index: 1;
+            user-select: none;
+        }
+
+        .coin:hover {
+            transform: scale(1.1);
+            background: #ffec8b;
+        }
+
+        .coin.in-jar {
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .counter {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #007aff;
+        }
+
+        button {
+            margin-top: 1.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            background: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Tip Jar</h1>
+        <p>Your hard work is appreciated. Click the coins to "collect" your bonus.</p>
+
+        <div class="stage" id="stage">
+            <svg id="jar-svg" width="140" height="180" viewBox="0 0 140 180">
+                <path d="M20,40 Q20,20 40,20 L100,20 Q120,20 120,40 L130,150 Q130,170 110,170 L30,170 Q10,170 10,150 Z" 
+                      fill="rgba(200, 230, 255, 0.2)" stroke="#aab" stroke-width="3"/>
+                <path d="M35,40 L35,140" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+                <rect x="40" y="80" width="60" height="40" rx="5" fill="white" stroke="#ccc" />
+                <text x="70" y="105" font-size="12" text-anchor="middle" fill="#999" font-family="Arial">TIPS</text>
+            </svg>
+        </div>
+
+        <div class="counter">Total Earnings: $<span id="total">0.00</span></div>
+        <button onclick="resetCoins()">Reset Empty Promises</button>
+    </div>
+
+    <audio id="clink-sound" src="https://assets.mixkit.co/active_storage/sfx/2005/2005-preview.mp3" preload="auto"></audio>
+
+    <script>
+        const stage = document.getElementById('stage');
+        const totalDisplay = document.getElementById('total');
+        const clinkSound = document.getElementById('clink-sound');
+        let total = 0;
+
+        function createCoin() {
+            const coin = document.createElement('div');
+            coin.className = 'coin';
+            coin.innerText = '$';
+            
+            // Randomly scatter coins around the jar
+            const side = Math.random() > 0.5 ? 'left' : 'right';
+            const x = side === 'left' ? (Math.random() * 80) : (window.innerWidth > 600 ? 450 + Math.random() * 80 : 250 + Math.random() * 50);
+            const y = 200 + Math.random() * 50;
+
+            coin.style.left = `${Math.random() * 80 + (side === 'left' ? 10 : 250)}px`;
+            coin.style.top = `${y}px`;
+
+            coin.onclick = () => deposit(coin);
+            stage.appendChild(coin);
+        }
+
+        function deposit(coin) {
+            // Play sound
+            clinkSound.currentTime = 0;
+            clinkSound.play();
+
+            // Animate into jar
+            coin.classList.add('in-jar');
+            
+            // Center of jar logic
+            const jarX = 70; // middle of 140 width jar
+            const randomInnerX = (Math.random() * 60) + 40; // stay within jar walls
+            const randomInnerY = (Math.random() * 40) + 120; // stay at bottom of jar
+
+            coin.style.left = `calc(50% - 20px + ${(Math.random() - 0.5) * 40}px)`;
+            coin.style.top = `${randomInnerY}px`;
+            coin.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+            total += 0.25;
+            totalDisplay.innerText = total.toFixed(2);
+        }
+
+        function resetCoins() {
+            stage.querySelectorAll('.coin').forEach(c => c.remove());
+            total = 0;
+            totalDisplay.innerText = "0.00";
+            for(let i=0; i<8; i++) createCoin();
+        }
+
+        // Initialize coins
+        for(let i=0; i<8; i++) createCoin();
+    </script>
+</body>
+</html>
