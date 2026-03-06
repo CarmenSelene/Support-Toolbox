@@ -31,12 +31,11 @@
 
         .stage {
             position: relative;
-            height: 350px;
+            height: 380px;
             background: #fff;
             border-bottom: 4px solid #ddd;
             overflow: hidden;
             border-radius: 4px;
-            margin-bottom: 1rem;
         }
 
         #jar-svg {
@@ -50,8 +49,8 @@
 
         .coin {
             position: absolute;
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             background: linear-gradient(135deg, #ffd700, #ffae00);
             border: 2px solid #b8860b;
             border-radius: 50%;
@@ -64,42 +63,25 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             z-index: 5;
             user-select: none;
-            transition: transform 0.1s, box-shadow 0.1s;
+            transition: transform 0.1s;
         }
 
         .coin:hover {
-            transform: scale(1.1) rotate(5deg);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: scale(1.05);
         }
 
+        /* The 'in-jar' class handles the transition to the bottom */
         .coin.in-jar {
             pointer-events: none;
-            z-index: 1;
-            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2;
+            transition: all 0.6s cubic-bezier(0.47, 0, 0.745, 0.715);
         }
 
         .counter {
-            margin-top: 1.5rem;
-            font-size: 1.4rem;
+            margin-top: 2rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            color: #28a745;
-        }
-
-        button {
-            margin-top: 1.5rem;
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            border: 1px solid #ccc;
-            background: #fff;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: #f0f0f0;
-            border-color: #999;
+            color: #111;
         }
     </style>
 </head>
@@ -110,25 +92,20 @@
         <p>A digital monument to "Going the Extra Mile." Click the coins to deposit them.</p>
 
         <div class="stage" id="stage">
-            <svg id="jar-svg" width="160" height="200" viewBox="0 0 140 180">
+            <svg id="jar-svg" width="180" height="220" viewBox="0 0 140 180">
                 <path d="M20,40 Q20,20 40,20 L100,20 Q120,20 120,40 L130,150 Q130,170 110,170 L30,170 Q10,170 10,150 Z" 
-                      fill="rgba(220, 240, 255, 0.25)" stroke="#aab" stroke-width="2"/>
-                <path d="M30,45 L30,130" stroke="white" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
-                <rect x="35" y="85" width="70" height="35" rx="3" fill="white" stroke="#ddd" />
-                <text x="70" y="107" font-size="11" text-anchor="middle" fill="#666" font-family="Arial" font-weight="bold">TIPS</text>
+                      fill="rgba(220, 240, 255, 0.15)" stroke="#aab" stroke-width="2"/>
+                <path d="M28,45 L28,140" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+                <text x="70" y="105" font-size="14" text-anchor="middle" fill="#888" font-family="Arial" font-weight="bold" letter-spacing="2" opacity="0.6">TIPS</text>
             </svg>
         </div>
 
-        <div class="counter">Total Bonus: $<span id="total">0.00</span></div>
-        <button onclick="resetApp()">Refresh Disappointments</button>
+        <div class="counter">Total Collected: $<span id="total">0.00</span></div>
     </div>
-
-    <audio id="clink-sound" src="https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3" preload="auto"></audio>
 
     <script>
         const stage = document.getElementById('stage');
         const totalDisplay = document.getElementById('total');
-        const clinkSound = document.getElementById('clink-sound');
         let total = 0;
 
         function createCoin() {
@@ -136,12 +113,13 @@
             coin.className = 'coin';
             coin.innerText = '$';
             
+            // Random positioning on the sides of the stage
             const isLeft = Math.random() > 0.5;
             const xPos = isLeft ? 
-                         (Math.random() * 80 + 20) : 
-                         (stage.offsetWidth - 120 + Math.random() * 80);
+                         (Math.random() * 60 + 20) : 
+                         (stage.offsetWidth - 110 + Math.random() * 60);
             
-            const yPos = Math.random() * 150 + 50;
+            const yPos = Math.random() * 180 + 40;
 
             coin.style.left = `${xPos}px`;
             coin.style.top = `${yPos}px`;
@@ -151,35 +129,31 @@
         }
 
         function deposit(coin) {
-            // Play sound with a slight pitch variation for realism
-            const soundClone = clinkSound.cloneNode();
-            soundClone.volume = 0.7;
-            soundClone.play();
-
             coin.classList.add('in-jar');
             
-            // Random scatter at the bottom of the jar
-            const randomInnerX = (Math.random() * 60) - 30; 
-            const randomInnerY = (Math.random() * 30) + 125; 
+            // Coordinates to reach the actual bottom of the jar
+            // stage height is 380, jar bottom path is near 170 in SVG coords
+            const randomInnerX = (Math.random() * 50) - 25; 
+            
+            // Calculating bottom: Stage bottom (380) - jar offset (10) - coin height (48) - slight margin
+            const groundLevel = stage.offsetHeight - 75; 
+            const randomJostle = (Math.random() * 20); // Small variance so they don't align perfectly
 
-            coin.style.left = `calc(50% + ${randomInnerX}px - 22px)`;
-            coin.style.top = `${randomInnerY}px`;
-            coin.style.transform = `rotate(${(Math.random() - 0.5) * 40}deg)`;
+            coin.style.left = `calc(50% + ${randomInnerX}px - 24px)`;
+            coin.style.top = `${groundLevel + randomJostle}px`;
+            coin.style.transform = `rotate(${(Math.random() - 0.5) * 60}deg)`;
 
             total += 0.25;
             totalDisplay.innerText = total.toFixed(2);
+            
+            // Optional: Spawn a new coin outside to keep the "reward" loop going
+            setTimeout(createCoin, 1000);
         }
 
-        function resetApp() {
-            stage.querySelectorAll('.coin').forEach(c => c.remove());
-            total = 0;
-            totalDisplay.innerText = "0.00";
-            for(let i=0; i<6; i++) {
-                setTimeout(createCoin, i * 100);
-            }
+        // Start with 6 coins ready to be clicked
+        for(let i=0; i<6; i++) {
+            createCoin();
         }
-
-        resetApp();
     </script>
 </body>
 </html>
