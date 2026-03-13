@@ -3,85 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blame Game - Lightspeed Edition</title>
+    <title>Blame Game</title>
     <style>
-        /* Your existing styles plus some for the close button */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f4f9; }
-        .container { margin-top: 50px; }
-        #wheel { width: 300px; height: 300px; border-radius: 50%; border: 5px solid #333; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.5rem; background: #fff; transition: transform 2s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f0f0;
+            overflow: hidden; /* Prevent scroll on zoom/flash */
+        }
         
-        /* The Button to close the Lightspeed Modal */
-        .exit-btn {
-            margin-top: 30px;
-            padding: 12px 24px;
-            background-color: #e51937; /* Lightspeed Red */
-            color: white;
-            border: none;
-            border-radius: 5px;
+        body {
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        header {
+            flex: 0 1 auto; /* Don't grow, shrink if needed */
+            padding-top: 20px; /* Pulls it closer to the top */
+        }
+
+        main {
+            flex: 1 1 auto; /* Takes up remaining space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Centers the wheel/result vertically in this space */
+            align-items: center;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 1.2em;
+            color: #555;
+            font-weight: 400;
+            margin-top: 0;
+            margin-bottom: 20px; /* Reduced margin */
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 400px; /* Made larger */
+            height: 400px; /* Made larger */
             cursor: pointer;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            border: 5px solid #ccc;
+            
+            /* This creates the 7-segment pie chart.
+              Each color gets an equal ~51.4-degree slice (360 / 7).
+            */
+            background: conic-gradient(
+                #FF6347 0deg 51.43deg,  /* Tomato */
+                #4682B4 51.43deg 102.86deg, /* SteelBlue */
+                #32CD32 102.86deg 154.29deg, /* LimeGreen */
+                #FFD700 154.29deg 205.71deg, /* Gold */
+                #FF4500 205.71deg 257.14deg, /* OrangeRed */
+                #9370DB 257.14deg 308.57deg, /* MediumPurple */
+                #00CED1 308.57deg 360deg  /* DarkTurquoise */
+            );
+        }
+
+        .arrow {
+            position: absolute;
+            top: 0; /* Sits on the top edge, pointing in */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            /* This creates the triangle/arrow shape */
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 30px solid #333; /* Points DOWN into the chart */
+            z-index: 10;
+        }
+
+        /* The dot in the center has been removed. */
+
+        /* This class is added by JavaScript to make the wheel spin */
+        .spinning {
+            transition: transform 4s cubic-bezier(0.2, 0.8, 0.7, 1); /* Slower, easing out */
+        }
+
+        /* This div will show the result */
+        .result {
+            margin-top: 30px;
+            font-size: 2em;
             font-weight: bold;
-            display: none; /* Hidden until we know we are in an iframe */
+            color: #333;
+            min-height: 1.5em; /* Prevents layout shift */
+        }
+
+        /* This animation is added when a result is chosen */
+        .result.highlight {
+            animation: highlight-flash 0.8s ease-out;
+        }
+        
+        @keyframes highlight-flash {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.15); /* Pop effect */
+                color: #000;
+            }
+            100% {
+                transform: scale(1);
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>The Blame Game</h1>
-        <div id="wheel">?</div>
-        <button onclick="spinWheel()">Click to Spin!</button>
-        
-        <br>
-        <button id="lightspeedExit" class="exit-btn" onclick="closeLightspeedModal()">Finish & Close</button>
-    </div>
+    <header>
+        <h1>Blame Game</h1>
+        <h2>click to spin and find out whose fault IT is</h2>
+    </header>
+
+    <main>
+        <div class="wheel-container" onclick="spinWheel()">
+            <div class="arrow"></div>
+            <div class="wheel" id="spinWheel">
+                </div>
+        </div>
+
+        <div id="result-display" class="result">Click to spin!</div>
+    </main>
 
     <script>
-        // 1. CAPTURE THE ORIGIN
-        // Lightspeed appends ?origin=yourstore.retail.lightspeed.app to the URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const lsOrigin = urlParams.get('origin');
+        const wheel = document.getElementById('spinWheel');
+        const resultDisplay = document.getElementById('result-display');
+        let isSpinning = false;
+        
+        // The 7 segments, in order (0-~51.4deg, ~51.4-~102.8deg, etc.)
+        const segments = [
+            'Product Team',
+            'Tier 1 Support',
+            'Internet Outage',
+            'Reid',
+            'AWS is Down',
+            'Zoom',
+            'Critically Low Caffeine'
+        ];
 
-        // Show the exit button only if we detect we are inside Lightspeed
-        if (lsOrigin) {
-            document.getElementById('lightspeedExit').style.display = 'inline-block';
-        }
-
-        // Your existing Spin Logic
         function spinWheel() {
-            const options = ["The Developer", "The Internet", "Mercury Retrograde", "Cache Issues", "The User"];
-            const choice = options[Math.floor(Math.random() * options.length)];
-            const wheel = document.getElementById('wheel');
-            wheel.style.transform = "rotate(" + (Math.random() * 360 + 1440) + "deg)";
-            setTimeout(() => {
-                wheel.innerText = choice;
-            }, 2000);
-        }
+            if (isSpinning) return;
+            isSpinning = true;
 
-        // 2. THE LIGHTSPEED CLOSE FUNCTION
-        function closeLightspeedModal() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const origin = urlParams.get('origin');
+            // 1. Reset text and highlight
+            resultDisplay.textContent = 'Spinning...';
+            resultDisplay.classList.remove('highlight');
+            
+            // 2. Reset wheel spin for a new turn
+            wheel.style.transition = 'none';
+            const currentRotation = getComputedStyle(wheel).transform;
+            // This ensures the next spin doesn't just start from 0
+            if (currentRotation !== 'none') {
+                wheel.style.transform = currentRotation;
+            }
+            
+            // Force browser to apply the reset
+            void wheel.offsetWidth; 
 
-    if (!origin) {
-        console.error("No origin parameter found. Are you testing inside Lightspeed?");
-        return;
-    }
+            // 3. Determine target segment randomly
+            const segmentsLength = segments.length;
+            const randomIndex = Math.floor(Math.random() * segmentsLength);
+            const targetSegment = segments[randomIndex];
 
-    // Lightspeed usually provides the origin as 'storename.retail.lightspeed.app'
-    // We must prepend https:// to make it a valid targetOrigin
-    const targetOrigin = `https://${origin}`;
+            // 4. Calculate rotation
+            const degreesPerSegment = 360 / segmentsLength;
+            const segmentMidpoint = degreesPerSegment / 2;
+            
+            // Calculate the target rotation
+            let degreesToLandOn = (randomIndex * degreesPerSegment) + segmentMidpoint;
+            
+            // Spin backwards to align the segment under the static top arrow
+            degreesToLandOn = 360 - degreesToLandOn;
 
-    const payload = JSON.stringify({
-        step: "EXIT"
-    });
+            // 5. Add multiple full spins
+            const fullSpins = 5; 
+            const totalRotation = (fullSpins * 360) + degreesToLandOn;
 
-    console.log("Sending message to:", targetOrigin);
-    window.parent.postMessage(payload, targetOrigin);
-}
+            // 6. Apply the spinning transition
+            wheel.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1.0)';
+            wheel.style.transform = `rotate(${totalRotation}deg)`;
 
-            // 3. SEND THE POSTMESSAGE
-            // We target the parent window and provide the secure origin
-            window.parent.postMessage(payload, `https://${lsOrigin}`);
+            // 7. After animation, show the result and re-enable spinning
+            wheel.addEventListener('transitionend', () => {
+                isSpinning = false;
+                
+                // Show the winner
+                resultDisplay.textContent = `It's... ${targetSegment}'s fault!`;
+                resultDisplay.classList.add('highlight'); // Add flash animation
+                
+                // This 'resets' the wheel angle without animation
+                // so the next spin starts from the new position
+                const currentRotation = totalRotation % 360;
+                wheel.style.transition = 'none';
+                wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+            }, { once: true });
         }
     </script>
 </body>
