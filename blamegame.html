@@ -59,15 +59,25 @@
 
         // 2. THE LIGHTSPEED CLOSE FUNCTION
         function closeLightspeedModal() {
-            if (!lsOrigin) {
-                alert("Not running inside Lightspeed. Use the 'origin' URL parameter to test.");
-                return;
-            }
+    const urlParams = new URLSearchParams(window.location.search);
+    const origin = urlParams.get('origin');
 
-            // Lightspeed expects a JSON string with a 'step'
-            const payload = JSON.stringify({
-                step: "EXIT"
-            });
+    if (!origin) {
+        console.error("No origin parameter found. Are you testing inside Lightspeed?");
+        return;
+    }
+
+    // Lightspeed usually provides the origin as 'storename.retail.lightspeed.app'
+    // We must prepend https:// to make it a valid targetOrigin
+    const targetOrigin = `https://${origin}`;
+
+    const payload = JSON.stringify({
+        step: "EXIT"
+    });
+
+    console.log("Sending message to:", targetOrigin);
+    window.parent.postMessage(payload, targetOrigin);
+}
 
             // 3. SEND THE POSTMESSAGE
             // We target the parent window and provide the secure origin
