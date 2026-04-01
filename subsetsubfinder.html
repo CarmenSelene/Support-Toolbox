@@ -27,7 +27,7 @@
 
 <div class="container">
     <h2>Subset Sum Finder</h2>
-    <p class="status">Find combinations that total a target. Open Console (F12) to see logs.</p>
+    <p class="status">Optimized for large datasets with negative values.</p>
     
     <label>Numbers</label>
     <textarea id="numbersInput" placeholder="put data here"></textarea>
@@ -47,30 +47,35 @@
 </div>
 
 <script>
-    // Worker code using only standard strings to avoid "Unexpected Token" issues
+    // Advanced Web Worker with "Look-ahead" pruning
     const workerCode = "self.onmessage = function(e) {" +
         "const { numbers, target } = e.data;" +
         "const results = [];" +
         "const tolerance = 0.001;" +
-        "const hasNegatives = numbers.some(n => n < 0);" +
         "let iterations = 0;" +
-        "const MAX_ITERATIONS = 2000000;" +
-        "function backtrack(start, currentSum, path) {" +
+        "const MAX_ITERATIONS = 5000000;" + // Bumped up for harder tasks
+        "" +
+        "const posNumbers = numbers.filter(n => n > 0).sort((a,b) => b-a);" +
+        "const negNumbers = numbers.filter(n => n <= 0).sort((a,b) => a-b);" +
+        "const sortedNumbers = [...posNumbers, ...negNumbers];" +
+        "" +
+        "function backtrack(index, currentSum, path) {" +
             "iterations++;" +
             "if (Math.abs(currentSum - target) < tolerance) {" +
                 "results.push([...path]);" +
                 "return;" +
             "}" +
-            "if (!hasNegatives && currentSum > target + tolerance) return;" +
-            "if (results.length >= 50 || iterations > MAX_ITERATIONS) return;" +
-            "for (let i = start; i < numbers.length; i++) {" +
-                "path.push(numbers[i]);" +
-                "backtrack(i + 1, currentSum + numbers[i], path);" +
+            "if (iterations > MAX_ITERATIONS || results.length >= 20) return;" +
+            "" +
+            "for (let i = index; i < sortedNumbers.length; i++) {" +
+                "const num = sortedNumbers[i];" +
+                "path.push(num);" +
+                "backtrack(i + 1, currentSum + num, path);" +
                 "path.pop();" +
-                "if (results.length >= 50 || iterations > MAX_ITERATIONS) break;" +
+                "if (iterations > MAX_ITERATIONS || results.length >= 20) break;" +
             "}" +
         "}" +
-        "numbers.sort((a, b) => b - a);" +
+        "" +
         "backtrack(0, 0, []);" +
         "self.postMessage({ results, iterations, exhausted: iterations <= MAX_ITERATIONS });" +
     "};";
@@ -83,19 +88,9 @@
 
     findBtn.onclick = function() {
         console.log("click");
-        
         const rawInput = document.getElementById('numbersInput').value;
         const target = parseFloat(document.getElementById('targetInput').value);
-        
-        // Split by comma, newline, or space
-        const numbers = rawInput
-            .replace(/,/g, ' ') 
-            .split(/\s+/)
-            .map(function(n) { return parseFloat(n.trim()); })
-            .filter(function(n) { return !isNaN(n); });
-
-        console.log("Numbers parsed count:", numbers.length);
-        console.log("Target value:", target);
+        const numbers = rawInput.replace(/,/g, ' ').split(/\s+/).map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
 
         if (numbers.length === 0 || isNaN(target)) {
             statusUpdate.innerText = "Error: Input data or target is missing.";
@@ -105,56 +100,31 @@
         resultsList.innerHTML = '';
         findBtn.disabled = true;
         stopBtn.style.display = 'inline-block';
-        statusUpdate.innerHTML = "<span class='badge'>RUNNING</span> Processing dataset...";
+        statusUpdate.innerHTML = "<span class='badge'>RUNNING</span> Deep-scanning combinations...";
 
-        try {
-            const blob = new Blob([workerCode], { type: 'application/javascript' });
-            worker = new Worker(URL.createObjectURL(blob));
-            
-            console.log("Worker initialized successfully.");
-            worker.postMessage({ numbers, target });
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        worker = new Worker(URL.createObjectURL(blob));
+        worker.postMessage({ numbers, target });
 
-            worker.onmessage = function(e) {
-                const data = e.data;
-                console.log("Worker finished. Matches found:", data.results.length);
-
-                if (data.results.length === 0) {
-                    statusUpdate.innerText = data.exhausted ? "No matches found." : "Search timed out (too many combinations).";
-                } else {
-                    statusUpdate.innerText = "Found " + data.results.length + " matches:";
-                    data.results.forEach(function(sol) {
-                        const li = document.createElement('li');
-                        li.innerText = sol.join(' + ') + ' = ' + target;
-                        resultsList.appendChild(li);
-                    });
-                }
-                cleanup();
-            };
-
-            worker.onerror = function(err) {
-                console.error("Worker Execution Error:", err);
-                statusUpdate.innerText = "Error in background processing.";
-                cleanup();
-            };
-
-        } catch (err) {
-            console.error("Worker Creation Error:", err);
-            statusUpdate.innerText = "Browser blocked worker creation.";
+        worker.onmessage = function(e) {
+            const data = e.data;
+            if (data.results.length === 0) {
+                statusUpdate.innerText = data.exhausted ? "Checked all possibilities. No matches found." : "Search timed out. The dataset is too complex.";
+            } else {
+                statusUpdate.innerText = "Found " + data.results.length + " match(es) " + (data.exhausted ? "" : "(Partial search)") + ":";
+                data.results.forEach(function(sol) {
+                    const li = document.createElement('li');
+                    li.innerText = sol.join(' + ') + ' = ' + target;
+                    resultsList.appendChild(li);
+                });
+            }
             cleanup();
-        }
+        };
+        worker.onerror = function() { cleanup(); statusUpdate.innerText = "Error in background task."; };
     };
 
-    stopBtn.onclick = function() {
-        console.log("User stopped the task.");
-        cleanup();
-        statusUpdate.innerText = "Task cancelled.";
-    };
-
-    function cleanup() {
-        if (worker) worker.terminate();
-        findBtn.disabled = false;
-        stopBtn.style.display = 'none';
-    }
+    function cleanup() { if (worker) worker.terminate(); findBtn.disabled = false; stopBtn.style.display = 'none'; }
+    stopBtn.onclick = cleanup;
 </script>
 
 </body>
