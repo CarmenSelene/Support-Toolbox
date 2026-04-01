@@ -10,30 +10,30 @@
         h2 { margin-top: 0; color: #1d1d1f; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
         textarea, input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-        textarea { height: 100px; font-family: Consolas, Monaco, "Libre Mono", monospace; }
+        textarea { height: 120px; font-family: Consolas, Monaco, monospace; }
         .button-group { display: flex; gap: 10px; }
         button { flex: 1; background-color: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
         button:hover { background-color: #0056b3; }
         button.secondary { background-color: #ff3b30; }
-        button.secondary:hover { background-color: #d32f2f; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         #results { margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; }
         ul { list-style: none; padding: 0; }
-        li { font-family: Consolas, SFMono-Regular, monospace; background: #f9f9f9; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; border-left: 4px solid #007aff; word-break: break-all; }
-        .status { font-size: 13px; color: #666; margin-bottom: 10px; }
+        li { font-family: Consolas, SFMono-Regular, monospace; background: #f9f9f9; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-size: 12px; border-left: 4px solid #007aff; word-break: break-all; }
+        .status { font-size: 13px; color: #666; margin-bottom: 10px; line-height: 1.4; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #eee; font-size: 11px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Subset Sum Finder</h2>
-    <p class="status">Find combinations of numbers that equal a target value.</p>
+    <p class="status">Calculates combinations for large datasets, including negative values.</p>
     
     <label>Numbers (Comma or newline separated)</label>
-    <textarea id="numbersInput" placeholder="120.50, 45.00, 30.10..."></textarea>
+    <textarea id="numbersInput" placeholder="Paste your 130+ numbers here..."></textarea>
 
     <label>Target Sum</label>
-    <input type="number" id="targetInput" placeholder="e.g. 150.60" step="any">
+    <input type="number" id="targetInput" placeholder="e.g. 500.00" step="any">
 
     <div class="button-group">
         <button id="findBtn">Find Combinations</button>
@@ -47,31 +47,48 @@
 </div>
 
 <script>
-    // Inline Web Worker Script
     const workerCode = `
         self.onmessage = function(e) {
             const { numbers, target } = e.data;
             const results = [];
-            const tolerance = 0.001; // Handle floating point math
+            const tolerance = 0.001;
+            const hasNegatives = numbers.some(n => n < 0);
+            let iterations = 0;
+            const MAX_ITERATIONS = 2000000; // Safety cap to prevent infinite hangs
 
             function backtrack(start, currentSum, path) {
+                iterations++;
+                
+                // If we found a match
                 if (Math.abs(currentSum - target) < tolerance) {
                     results.push([...path]);
                     return;
                 }
-                if (currentSum > target + tolerance || results.length >= 100) return;
+
+                // Optimization: Pruning only works if all numbers are positive
+                if (!hasNegatives && currentSum > target + tolerance) return;
+                
+                // Stop if we found enough or searched too much
+                if (results.length >= 50 || iterations > MAX_ITERATIONS) return;
 
                 for (let i = start; i < numbers.length; i++) {
                     path.push(numbers[i]);
                     backtrack(i + 1, currentSum + numbers[i], path);
                     path.pop();
-                    if (results.length >= 100) break;
+                    
+                    if (results.length >= 50 || iterations > MAX_ITERATIONS) break;
                 }
             }
 
-            numbers.sort((a, b) => b - a); // Sort descending for faster pruning
+            // Sort numbers to help the algorithm find matches faster
+            numbers.sort((a, b) => b - a);
             backtrack(0, 0, []);
-            self.postMessage(results);
+            
+            self.postMessage({ 
+                results, 
+                exhausted: iterations <= MAX_ITERATIONS,
+                count: iterations 
+            });
         };
     `;
 
@@ -84,29 +101,36 @@
     findBtn.onclick = () => {
         const input = document.getElementById('numbersInput').value;
         const target = parseFloat(document.getElementById('targetInput').value);
-        const numbers = input.split(/[,\n]/).map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+        const numbers = input.split(/[,\n]/)
+                             .map(n => n.trim())
+                             .filter(n => n !== "")
+                             .map(n => parseFloat(n))
+                             .filter(n => !isNaN(n));
 
         if (numbers.length === 0 || isNaN(target)) {
             alert("Please enter valid numbers and a target sum.");
             return;
         }
 
-        // UI Reset
         resultsList.innerHTML = '';
-        statusUpdate.innerText = "Processing in background... (this may take a while for large sets)";
+        statusUpdate.innerHTML = "Searching millions of combinations... <span class='badge'>Worker Active</span>";
         findBtn.disabled = true;
         stopBtn.style.display = 'inline-block';
 
-        // Start Worker
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         worker = new Worker(URL.createObjectURL(blob));
-        
         worker.postMessage({ numbers, target });
 
         worker.onmessage = (e) => {
-            const solutions = e.data;
-            statusUpdate.innerText = solutions.length === 0 ? "No combinations found." : \`Found \${solutions.length} combination(s) (Max 100):\`;
-            solutions.forEach(sol => {
+            const { results, exhausted } = e.data;
+            
+            if (results.length === 0) {
+                statusUpdate.innerText = exhausted ? "No matches found in the entire dataset." : "Search timed out. The dataset is too large to check every single possibility.";
+            } else {
+                statusUpdate.innerText = \`Found \${results.length} matches\${exhausted ? '' : ' (Partial search)'}:\`;
+            }
+
+            results.forEach(sol => {
                 const li = document.createElement('li');
                 li.innerText = sol.join(' + ') + ' = ' + target;
                 resultsList.appendChild(li);
@@ -121,7 +145,7 @@
         if (worker) worker.terminate();
         findBtn.disabled = false;
         stopBtn.style.display = 'none';
-        if(statusUpdate.innerText.includes("Processing")) statusUpdate.innerText = "Task stopped by user.";
+        if(statusUpdate.innerText.includes("Searching")) statusUpdate.innerText = "Task stopped.";
     }
 </script>
 
