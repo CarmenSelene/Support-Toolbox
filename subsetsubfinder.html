@@ -1,252 +1,129 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subset Sum Finder</title>
+    <title>Subset Sum Finder - Support Toolbox</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 2rem;
-            background-color: #f4f7f6;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 2rem;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        h1 {
-            text-align: center;
-            color: #111;
-        }
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box; /* Ensures padding doesn't affect width */
-        }
-        button {
-            display: block;
-            width: 100%;
-            padding: 0.85rem;
-            border: none;
-            border-radius: 4px;
-            background-color: #007aff;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #results {
-            margin-top: 2rem;
-            border-top: 1px solid #eee;
-            padding-top: 1.5rem;
-        }
-        #results h2 {
-            margin-top: 0;
-        }
-        #results ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        #results li {
-            background-color: #f9f9f9;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 0.5rem;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-        }
-        .error {
-            color: #d9534f;
-            font-weight: bold;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 40px 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: #1d1d1f; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        textarea, input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        textarea { height: 100px; font-family: Consolas, Monaco, "Libre Mono", monospace; }
+        .button-group { display: flex; gap: 10px; }
+        button { flex: 1; background-color: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button.secondary { background-color: #ff3b30; }
+        button.secondary:hover { background-color: #d32f2f; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #results { margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; }
+        ul { list-style: none; padding: 0; }
+        li { font-family: Consolas, SFMono-Regular, monospace; background: #f9f9f9; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; border-left: 4px solid #007aff; word-break: break-all; }
+        .status { font-size: 13px; color: #666; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
+<div class="container">
+    <h2>Subset Sum Finder</h2>
+    <p class="status">Find combinations of numbers that equal a target value.</p>
+    
+    <label>Numbers (Comma or newline separated)</label>
+    <textarea id="numbersInput" placeholder="120.50, 45.00, 30.10..."></textarea>
 
-    <div class="container">
-        <h1>Subset Sum Finder</h1>
+    <label>Target Sum</label>
+    <input type="number" id="targetInput" placeholder="e.g. 150.60" step="any">
 
-
-        <div class="input-group">
-            <label for="numbers">Input Values</label>
-            <input type="text" id="numbers" placeholder="e.g., 1, 2a, 3,, 4, -5c">
-        </div>
-
-
-        <div class="input-group">
-            <label for="target">Target Value</label>
-            <input type="number" id="target" placeholder="e.g., 5">
-        </div>
-
-
-        <button id="solveButton">Find Combinations</button>
-
-
-        <div id="results">
-            <h2>Solutions</h2>
-            <ul id="solutionsList">
-                </ul>
-        </div>
+    <div class="button-group">
+        <button id="findBtn">Find Combinations</button>
+        <button id="stopBtn" class="secondary" style="display:none;">Stop Task</button>
     </div>
 
+    <div id="results">
+        <div id="statusUpdate" class="status"></div>
+        <ul id="resultsList"></ul>
+    </div>
+</div>
 
-    <script>
-        document.getElementById('solveButton').addEventListener('click', function() {
-            // 1. Get and clear UI elements
-            const resultsList = document.getElementById('solutionsList');
-            resultsList.innerHTML = ''; // Clear previous results
+<script>
+    // Inline Web Worker Script
+    const workerCode = `
+        self.onmessage = function(e) {
+            const { numbers, target } = e.data;
+            const results = [];
+            const tolerance = 0.001; // Handle floating point math
 
-
-            // 2. Parse Inputs
-            const numbersInput = document.getElementById('numbers').value;
-            const targetInput = document.getElementById('target').value;
-
-
-            // 3. Process Input 1: Find all numbers
-            // Use regex to find all number-like strings (e.g., -10, 5.5).
-            // This robustly ignores duplicate commas, spaces, and other text (e.g., "a", "b").
-            const numberRegex = /-?\d+(\.\d+)?/g;
-            const numberMatches = numbersInput.match(numberRegex);
-            
-            // Convert matched strings to numbers. If no matches, use an empty array.
-            const numbers = (numberMatches || []).map(Number);
-
-
-            // 4. Process Input 2: Target value
-            const target = parseFloat(targetInput);
-
-
-            // 5. Validation
-            if (isNaN(target)) {
-                displayError("Target value is not a valid number.");
-                return;
-            }
-            if (numbers.length === 0) {
-                displayError("No valid input numbers provided.");
-                return;
-            }
-
-
-            // 6. Core Logic: Find all combinations
-            const solutions = [];
-
-
-            /**
-             * Recursive backtracking function to find subsets.
-             * @param {number} startIndex - The index in the 'numbers' array to start checking from.
-             * @param {number} currentSum - The sum of the 'currentCombination' so far.
-             * @param {Array<number>} currentCombination - The subset being built in this path.
-             */
-            function findSubsets(startIndex, currentSum, currentCombination) {
-                // Check if precision errors are causing a mismatch
-                // Use a small epsilon for floating-point comparison
-                const epsilon = 1e-9;
-
-
-                // Base Case 1: Success
-                // We found a combination that sums exactly to the target
-                if (Math.abs(currentSum - target) < epsilon) {
-                    solutions.push([...currentCombination]); // Store a *copy*
-                    return; // Stop this path
+            function backtrack(start, currentSum, path) {
+                if (Math.abs(currentSum - target) < tolerance) {
+                    results.push([...path]);
+                    return;
                 }
+                if (currentSum > target + tolerance || results.length >= 100) return;
 
-
-                // Base Case 2: Failure (Pruning)
-                // If sum is over target, or we are out of numbers, this path is invalid.
-                if (currentSum > target || startIndex === numbers.length) {
-                    return; // Stop this path
-                }
-
-
-                // Recursive Step: Iterate through remaining numbers
-                for (let i = startIndex; i < numbers.length; i++) {
-                    const num = numbers[i];
-                    
-                    // Only explore this path if adding the number doesn't go over the target
-                    // (Adjust check for negative targets)
-                    const newSum = currentSum + num;
-                    if ( (target >= 0 && newSum <= target + epsilon) || 
-                         (target < 0 && newSum >= target - epsilon) ||
-                         (target > 0 && num < 0) || // Allow adding negatives
-                         (target < 0 && num > 0) ) { // Allow adding positives to negative target
-                        
-                        // 1. Choose: Include numbers[i] in the combination
-                        currentCombination.push(num);
-                        
-                        // 2. Explore: Recurse, starting from the *next* index (i + 1)
-                        // This ensures each number is used only once per combination
-                        findSubsets(i + 1, newSum, currentCombination);
-                        
-                        // 3. Unchoose (Backtrack): Remove numbers[i] to try the next path
-                        currentCombination.pop();
-                    }
+                for (let i = start; i < numbers.length; i++) {
+                    path.push(numbers[i]);
+                    backtrack(i + 1, currentSum + numbers[i], path);
+                    path.pop();
+                    if (results.length >= 100) break;
                 }
             }
 
+            numbers.sort((a, b) => b - a); // Sort descending for faster pruning
+            backtrack(0, 0, []);
+            self.postMessage(results);
+        };
+    `;
 
-            // Start the recursive process
-            findSubsets(0, 0, []);
+    let worker;
+    const findBtn = document.getElementById('findBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resultsList = document.getElementById('resultsList');
+    const statusUpdate = document.getElementById('statusUpdate');
 
+    findBtn.onclick = () => {
+        const input = document.getElementById('numbersInput').value;
+        const target = parseFloat(document.getElementById('targetInput').value);
+        const numbers = input.split(/[,\n]/).map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
 
-            // 7. Display Results
-            displaySolutions(solutions);
-        });
+        if (numbers.length === 0 || isNaN(target)) {
+            alert("Please enter valid numbers and a target sum.");
+            return;
+        }
 
+        // UI Reset
+        resultsList.innerHTML = '';
+        statusUpdate.innerText = "Processing in background... (this may take a while for large sets)";
+        findBtn.disabled = true;
+        stopBtn.style.display = 'inline-block';
 
-        /**
-         * Renders the found solutions to the list.
-         * @param {Array<Array<number>>} solutions
-         */
-        function displaySolutions(solutions) {
-            const resultsList = document.getElementById('solutionsList');
-            if (solutions.length === 0) {
-                resultsList.innerHTML = '<li>No combinations found.</li>';
-                return;
-            }
+        // Start Worker
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        worker = new Worker(URL.createObjectURL(blob));
+        
+        worker.postMessage({ numbers, target });
 
-
-            solutions.forEach(combo => {
+        worker.onmessage = (e) => {
+            const solutions = e.data;
+            statusUpdate.innerText = solutions.length === 0 ? "No combinations found." : \`Found \${solutions.length} combination(s) (Max 100):\`;
+            solutions.forEach(sol => {
                 const li = document.createElement('li');
-                li.textContent = combo.join(' + ');
+                li.innerText = sol.join(' + ') + ' = ' + target;
                 resultsList.appendChild(li);
             });
-        }
+            cleanup();
+        };
+    };
 
+    stopBtn.onclick = cleanup;
 
-        /**
-         * Displays an error message in the results area.
-         * @param {string} message
-         */
-        function displayError(message) {
-            const resultsList = document.getElementById('solutionsList');
-            resultsList.innerHTML = `<li class="error">${message}</li>`;
-        }
-
-
-    </script>
-
+    function cleanup() {
+        if (worker) worker.terminate();
+        findBtn.disabled = false;
+        stopBtn.style.display = 'none';
+        if(statusUpdate.innerText.includes("Processing")) statusUpdate.innerText = "Task stopped by user.";
+    }
+</script>
 
 </body>
 </html>
