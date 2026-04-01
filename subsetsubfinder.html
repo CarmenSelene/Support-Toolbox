@@ -20,17 +20,17 @@
         ul { list-style: none; padding: 0; }
         li { font-family: Consolas, SFMono-Regular, monospace; background: #f9f9f9; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-size: 12px; border-left: 4px solid #007aff; word-break: break-all; }
         .status { font-size: 13px; color: #666; margin-bottom: 10px; line-height: 1.4; }
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #eee; font-size: 11px; font-weight: bold; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #007aff; color: white; font-size: 11px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Subset Sum Finder</h2>
-    <p class="status">Calculates combinations for large datasets, including negative values.</p>
+    <p class="status">Calculates combinations for large datasets. Check the console (F12) for logs.</p>
     
-    <label>Numbers (Comma or newline separated)</label>
-    <textarea id="numbersInput" placeholder="Paste your 130+ numbers here..."></textarea>
+    <label>Numbers</label>
+    <textarea id="numbersInput" placeholder="put data here"></textarea>
 
     <label>Target Sum</label>
     <input type="number" id="targetInput" placeholder="e.g. 500.00" step="any">
@@ -54,98 +54,110 @@
             const tolerance = 0.001;
             const hasNegatives = numbers.some(n => n < 0);
             let iterations = 0;
-            const MAX_ITERATIONS = 2000000; // Safety cap to prevent infinite hangs
+            const MAX_ITERATIONS = 3000000; 
 
             function backtrack(start, currentSum, path) {
                 iterations++;
-                
-                // If we found a match
                 if (Math.abs(currentSum - target) < tolerance) {
                     results.push([...path]);
                     return;
                 }
-
-                // Optimization: Pruning only works if all numbers are positive
                 if (!hasNegatives && currentSum > target + tolerance) return;
-                
-                // Stop if we found enough or searched too much
                 if (results.length >= 50 || iterations > MAX_ITERATIONS) return;
 
                 for (let i = start; i < numbers.length; i++) {
                     path.push(numbers[i]);
                     backtrack(i + 1, currentSum + numbers[i], path);
                     path.pop();
-                    
                     if (results.length >= 50 || iterations > MAX_ITERATIONS) break;
                 }
             }
 
-            // Sort numbers to help the algorithm find matches faster
             numbers.sort((a, b) => b - a);
             backtrack(0, 0, []);
-            
-            self.postMessage({ 
-                results, 
-                exhausted: iterations <= MAX_ITERATIONS,
-                count: iterations 
-            });
+            self.postMessage({ results, iterations, exhausted: iterations <= MAX_ITERATIONS });
         };
     `;
 
-    let worker;
     const findBtn = document.getElementById('findBtn');
     const stopBtn = document.getElementById('stopBtn');
-    const resultsList = document.getElementById('resultsList');
     const statusUpdate = document.getElementById('statusUpdate');
+    const resultsList = document.getElementById('resultsList');
+    let worker;
 
     findBtn.onclick = () => {
-        const input = document.getElementById('numbersInput').value;
+        console.log("Click registered");
+        
+        const rawInput = document.getElementById('numbersInput').value;
         const target = parseFloat(document.getElementById('targetInput').value);
-        const numbers = input.split(/[,\n]/)
-                             .map(n => n.trim())
-                             .filter(n => n !== "")
-                             .map(n => parseFloat(n))
-                             .filter(n => !isNaN(n));
+        
+        // Robust parsing for commas, spaces, or newlines
+        const numbers = rawInput
+            .replace(/,/g, ' ') 
+            .split(/\s+/)
+            .map(n => parseFloat(n.trim()))
+            .filter(n => !isNaN(n));
+
+        console.log("Numbers parsed:", numbers.length, "Target:", target);
 
         if (numbers.length === 0 || isNaN(target)) {
-            alert("Please enter valid numbers and a target sum.");
+            statusUpdate.innerText = "Error: Please provide numbers and a target.";
             return;
         }
 
+        // UI Feedback
         resultsList.innerHTML = '';
-        statusUpdate.innerHTML = "Searching millions of combinations... <span class='badge'>Worker Active</span>";
         findBtn.disabled = true;
         stopBtn.style.display = 'inline-block';
+        statusUpdate.innerHTML = "<span class='badge'>RUNNING</span> Searching possibilities...";
 
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        worker = new Worker(URL.createObjectURL(blob));
-        worker.postMessage({ numbers, target });
-
-        worker.onmessage = (e) => {
-            const { results, exhausted } = e.data;
+        try {
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            worker = new Worker(URL.createObjectURL(blob));
             
-            if (results.length === 0) {
-                statusUpdate.innerText = exhausted ? "No matches found in the entire dataset." : "Search timed out. The dataset is too large to check every single possibility.";
-            } else {
-                statusUpdate.innerText = \`Found \${results.length} matches\${exhausted ? '' : ' (Partial search)'}:\`;
-            }
+            console.log("Worker started...");
+            worker.postMessage({ numbers, target });
 
-            results.forEach(sol => {
-                const li = document.createElement('li');
-                li.innerText = sol.join(' + ') + ' = ' + target;
-                resultsList.appendChild(li);
-            });
+            worker.onmessage = (e) => {
+                const { results, exhausted, iterations } = e.data;
+                console.log("Worker finished. Iterations:", iterations, "Results:", results.length);
+
+                if (results.length === 0) {
+                    statusUpdate.innerText = exhausted ? "No matches found." : "Timed out (too many combinations).";
+                } else {
+                    statusUpdate.innerText = \`Found \${results.length} matches:\`;
+                    results.forEach(sol => {
+                        const li = document.createElement('li');
+                        li.innerText = sol.join(' + ') + ' = ' + target;
+                        resultsList.appendChild(li);
+                    });
+                }
+                cleanup();
+            };
+
+            worker.onerror = (err) => {
+                console.error("Worker Error:", err);
+                statusUpdate.innerText = "Worker Error. Check console.";
+                cleanup();
+            };
+
+        } catch (e) {
+            console.error("Initialization Error:", e);
+            statusUpdate.innerText = "System Error: Could not start worker.";
             cleanup();
-        };
+        }
     };
 
-    stopBtn.onclick = cleanup;
+    stopBtn.onclick = () => {
+        console.log("Manual stop requested.");
+        cleanup();
+        statusUpdate.innerText = "Task stopped by user.";
+    };
 
     function cleanup() {
         if (worker) worker.terminate();
         findBtn.disabled = false;
         stopBtn.style.display = 'none';
-        if(statusUpdate.innerText.includes("Searching")) statusUpdate.innerText = "Task stopped.";
     }
 </script>
 
