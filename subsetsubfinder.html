@@ -27,13 +27,13 @@
 
 <div class="container">
     <h2>Subset Sum Finder</h2>
-    <p class="status">Calculates combinations for large datasets. Check the console (F12) for logs.</p>
+    <p class="status">Find combinations that total a target. Open Console (F12) to see logs.</p>
     
     <label>Numbers</label>
     <textarea id="numbersInput" placeholder="put data here"></textarea>
 
     <label>Target Sum</label>
-    <input type="number" id="targetInput" placeholder="e.g. 500.00" step="any">
+    <input type="number" id="targetInput" placeholder="e.g. 100.00" step="any">
 
     <div class="button-group">
         <button id="findBtn">Find Combinations</button>
@@ -47,37 +47,33 @@
 </div>
 
 <script>
-    const workerCode = `
-        self.onmessage = function(e) {
-            const { numbers, target } = e.data;
-            const results = [];
-            const tolerance = 0.001;
-            const hasNegatives = numbers.some(n => n < 0);
-            let iterations = 0;
-            const MAX_ITERATIONS = 3000000; 
-
-            function backtrack(start, currentSum, path) {
-                iterations++;
-                if (Math.abs(currentSum - target) < tolerance) {
-                    results.push([...path]);
-                    return;
-                }
-                if (!hasNegatives && currentSum > target + tolerance) return;
-                if (results.length >= 50 || iterations > MAX_ITERATIONS) return;
-
-                for (let i = start; i < numbers.length; i++) {
-                    path.push(numbers[i]);
-                    backtrack(i + 1, currentSum + numbers[i], path);
-                    path.pop();
-                    if (results.length >= 50 || iterations > MAX_ITERATIONS) break;
-                }
-            }
-
-            numbers.sort((a, b) => b - a);
-            backtrack(0, 0, []);
-            self.postMessage({ results, iterations, exhausted: iterations <= MAX_ITERATIONS });
-        };
-    `;
+    // Worker code using only standard strings to avoid "Unexpected Token" issues
+    const workerCode = "self.onmessage = function(e) {" +
+        "const { numbers, target } = e.data;" +
+        "const results = [];" +
+        "const tolerance = 0.001;" +
+        "const hasNegatives = numbers.some(n => n < 0);" +
+        "let iterations = 0;" +
+        "const MAX_ITERATIONS = 2000000;" +
+        "function backtrack(start, currentSum, path) {" +
+            "iterations++;" +
+            "if (Math.abs(currentSum - target) < tolerance) {" +
+                "results.push([...path]);" +
+                "return;" +
+            "}" +
+            "if (!hasNegatives && currentSum > target + tolerance) return;" +
+            "if (results.length >= 50 || iterations > MAX_ITERATIONS) return;" +
+            "for (let i = start; i < numbers.length; i++) {" +
+                "path.push(numbers[i]);" +
+                "backtrack(i + 1, currentSum + numbers[i], path);" +
+                "path.pop();" +
+                "if (results.length >= 50 || iterations > MAX_ITERATIONS) break;" +
+            "}" +
+        "}" +
+        "numbers.sort((a, b) => b - a);" +
+        "backtrack(0, 0, []);" +
+        "self.postMessage({ results, iterations, exhausted: iterations <= MAX_ITERATIONS });" +
+    "};";
 
     const findBtn = document.getElementById('findBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -85,48 +81,48 @@
     const resultsList = document.getElementById('resultsList');
     let worker;
 
-    findBtn.onclick = () => {
-        console.log("Click registered");
+    findBtn.onclick = function() {
+        console.log("click");
         
         const rawInput = document.getElementById('numbersInput').value;
         const target = parseFloat(document.getElementById('targetInput').value);
         
-        // Robust parsing for commas, spaces, or newlines
+        // Split by comma, newline, or space
         const numbers = rawInput
             .replace(/,/g, ' ') 
             .split(/\s+/)
-            .map(n => parseFloat(n.trim()))
-            .filter(n => !isNaN(n));
+            .map(function(n) { return parseFloat(n.trim()); })
+            .filter(function(n) { return !isNaN(n); });
 
-        console.log("Numbers parsed:", numbers.length, "Target:", target);
+        console.log("Numbers parsed count:", numbers.length);
+        console.log("Target value:", target);
 
         if (numbers.length === 0 || isNaN(target)) {
-            statusUpdate.innerText = "Error: Please provide numbers and a target.";
+            statusUpdate.innerText = "Error: Input data or target is missing.";
             return;
         }
 
-        // UI Feedback
         resultsList.innerHTML = '';
         findBtn.disabled = true;
         stopBtn.style.display = 'inline-block';
-        statusUpdate.innerHTML = "<span class='badge'>RUNNING</span> Searching possibilities...";
+        statusUpdate.innerHTML = "<span class='badge'>RUNNING</span> Processing dataset...";
 
         try {
             const blob = new Blob([workerCode], { type: 'application/javascript' });
             worker = new Worker(URL.createObjectURL(blob));
             
-            console.log("Worker started...");
+            console.log("Worker initialized successfully.");
             worker.postMessage({ numbers, target });
 
-            worker.onmessage = (e) => {
-                const { results, exhausted, iterations } = e.data;
-                console.log("Worker finished. Iterations:", iterations, "Results:", results.length);
+            worker.onmessage = function(e) {
+                const data = e.data;
+                console.log("Worker finished. Matches found:", data.results.length);
 
-                if (results.length === 0) {
-                    statusUpdate.innerText = exhausted ? "No matches found." : "Timed out (too many combinations).";
+                if (data.results.length === 0) {
+                    statusUpdate.innerText = data.exhausted ? "No matches found." : "Search timed out (too many combinations).";
                 } else {
-                    statusUpdate.innerText = \`Found \${results.length} matches:\`;
-                    results.forEach(sol => {
+                    statusUpdate.innerText = "Found " + data.results.length + " matches:";
+                    data.results.forEach(function(sol) {
                         const li = document.createElement('li');
                         li.innerText = sol.join(' + ') + ' = ' + target;
                         resultsList.appendChild(li);
@@ -135,23 +131,23 @@
                 cleanup();
             };
 
-            worker.onerror = (err) => {
-                console.error("Worker Error:", err);
-                statusUpdate.innerText = "Worker Error. Check console.";
+            worker.onerror = function(err) {
+                console.error("Worker Execution Error:", err);
+                statusUpdate.innerText = "Error in background processing.";
                 cleanup();
             };
 
-        } catch (e) {
-            console.error("Initialization Error:", e);
-            statusUpdate.innerText = "System Error: Could not start worker.";
+        } catch (err) {
+            console.error("Worker Creation Error:", err);
+            statusUpdate.innerText = "Browser blocked worker creation.";
             cleanup();
         }
     };
 
-    stopBtn.onclick = () => {
-        console.log("Manual stop requested.");
+    stopBtn.onclick = function() {
+        console.log("User stopped the task.");
         cleanup();
-        statusUpdate.innerText = "Task stopped by user.";
+        statusUpdate.innerText = "Task cancelled.";
     };
 
     function cleanup() {
