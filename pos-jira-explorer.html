@@ -90,18 +90,20 @@
         }
     }
 
-    // --- NUCLEAR PRE-FILTER LOGIC ---
+    // --- TARGETED LABELS PRE-FILTER LOGIC ---
     function passesPreFilter(row) {
         if (!isFocusModeActive) return true; 
         
-        // Convert the ENTIRE row object into a single lowercase text string
-        // This searches EVERY column (Description, Labels, Custom Fields, JSON, etc.)
-        const fullRowData = JSON.stringify(row).toLowerCase();
+        // Ensure we only look at the isolated Labels array
+        const labels = row._parsed.Labels.map(l => l.toLowerCase());
         
-        // Check for variations of the string anywhere in the data
-        return fullRowData.includes('pro-services') || 
-               fullRowData.includes('pro_services') ||
-               fullRowData.includes('pro services');
+        // Look for the exact tags found in your data exploration
+        return labels.some(label => 
+            label.includes('proservices-top-bugs') ||
+            label.includes('proservices_top_bugs') ||
+            label.includes('pro-serve-top-bugs') ||
+            label.includes('pro_serve_top_bugs')
+        );
     }
 
     document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -169,7 +171,7 @@
         });
 
         if (Object.keys(tagCounts).length === 0) {
-            cloudDiv.innerHTML = `<p style="color: #777; font-size: 0.9rem; text-align: center;">No matching data found.<br><br><i>Note: If you are seeing this, the phrase 'pro-services' does not exist anywhere in the CSV file you uploaded. Your export may be missing the labels column or may be outdated.</i></p>`;
+            cloudDiv.innerHTML = `<p style="color: #777; font-size: 0.9rem; text-align: center;">No matching data found.<br><br><i>Please check your dataset to ensure these exact labels exist in the "Labels (condensed)" column.</i></p>`;
             return;
         }
 
