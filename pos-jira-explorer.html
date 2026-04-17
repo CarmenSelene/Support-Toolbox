@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Concept Explorer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        /* Base & Vibe */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333333;
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        /* Core Layout Constraints */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            padding: 30px;
+        }
+
+        h1 { margin-top: 0; font-size: 1.5rem; color: #111; }
+        
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        input[type="file"] {
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        select {
+            font-family: inherit;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            font-size: 0.95rem;
+            width: 100%;
+            outline: none;
+        }
+
+        select:focus { border-color: #007aff; }
+
+        /* Tag Cloud */
+        #tagCloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+
+        .tag {
+            cursor: pointer;
+            color: #007aff;
+            transition: all 0.2s ease;
+            user-select: none;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .tag:hover, .tag.active {
+            color: #0056b3;
+            text-decoration: underline;
+            transform: scale(1.05);
+        }
+
+        /* Results Area */
+        #resultsHeader {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #555;
+            display: none;
+        }
+
+        #results {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Monospace LI Items */
+        #results li {
+            font-family: Consolas, "SFMono-Regular", monospace;
+            background: #fdfdfd;
+            border: 1px solid #eaeaea;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        #results li:hover {
+            border-color: #007aff;
+        }
+
+        .jira-summary {
+            padding: 12px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .jira-id {
+            color: #007aff;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .jira-title {
+            color: #333;
+            font-size: 0.85rem;
+            white-space: normal;
+        }
+
+        /* Expanded Details inside LI */
+        .jira-details {
+            display: none;
+            padding: 15px;
+            background: #f9fbfc;
+            border-top: 1px solid #eaeaea;
+            font-size: 0.8rem;
+            color: #555;
+            cursor: text;
+        }
+
+        #results li.open .jira-details {
+            display: block;
+        }
+        
+        #results li.open {
+            border-color: #007aff;
+            box-shadow: 0 2px 8px rgba(0,122,255,0.1);
+        }
+
+        .detail-row {
+            margin-bottom: 10px;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+        }
+        .detail-value {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>POS Concept Explorer</h1>
+    
+    <div class="controls">
+        <div>
+            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">1. Load Jira CSV Data (Processed Locally)</label>
+            <input type="file" id="csvFile" accept=".csv">
+        </div>
+        <div>
+            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">2. Filter By Grouping</label>
+            <select id="filterSelect" disabled>
+                <option value="Items">Context Items</option>
+                <option value="Pages">Context Pages</option>
+                <option value="Suggestions">Context Suggestions</option>
+                <option value="Labels">Jira Labels</option>
+                <option value="Components">Jira Components</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="tagCloud"></div>
+    
+    <div id="resultsHeader"></div>
+    <ul id="results"></ul>
+</div>
+
+<script>
+    let globalData = [];
+    let currentFilter = 'Items';
+
+    function cleanArrayString(str) {
+        if (!str || str === '#N/A' || typeof str !== 'string') return [];
+        return str.replace(/^\[|\]$/g, '').split(',').map(s => s.trim()).filter(s => s);
+    }
+
+    function safeJSONParse(str) {
+        try {
+            let clean = str.replace(/""/g, '"');
+            return JSON.parse(clean);
+        } catch (e) {
+            return { Pages: [], Items: [], Suggestions: [] };
+        }
+    }
+
+    document.getElementById('csvFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                globalData = results.data.map(row => {
+                    const parsedContext = safeJSONParse(row['POS_Context_JSON']);
+                    return {
+                        ...row,
+                        _parsed: {
+                            Items: parsedContext.Items || [],
+                            Pages: parsedContext.Pages || [],
+                            Suggestions: parsedContext.Suggestions || [],
+                            Labels: cleanArrayString(row['Labels (condensed)']),
+                            Components: cleanArrayString(row['Components (condensed)'])
+                        }
+                    };
+                });
+                
+                document.getElementById('filterSelect').disabled = false;
+                renderTagCloud();
+            }
+        });
+    });
+
+    document.getElementById('filterSelect').addEventListener('change', function(e) {
+        currentFilter = e.target.value;
+        document.getElementById('results').innerHTML = '';
+        document.getElementById('resultsHeader').style.display = 'none';
+        renderTagCloud();
+    });
+
+    function renderTagCloud() {
+        const cloudDiv = document.getElementById('tagCloud');
+        cloudDiv.innerHTML = '';
+        
+        let tagCounts = {};
+        let maxCount = 0;
+
+        globalData.forEach(row => {
+            const tags = row._parsed[currentFilter] || [];
+            tags.forEach(tag => {
+                if (!tag || tag === 'TBD') return; 
+                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                if (tagCounts[tag] > maxCount) maxCount = tagCounts[tag];
+            });
+        });
+
+        Object.keys(tagCounts).sort().forEach(tag => {
+            const count = tagCounts[tag];
+            const span = document.createElement('span');
+            span.className = 'tag';
+            span.textContent = `${tag} (${count})`;
+            
+            const minSize = 14;
+            const maxSize = 28;
+            const size = minSize + ((count / maxCount) * (maxSize - minSize));
+            span.style.fontSize = `${size}px`;
+            span.style.fontWeight = count > (maxCount / 2) ? '600' : '400';
+            span.style.opacity = Math.max(0.6, count / maxCount + 0.3);
+
+            span.onclick = () => {
+                document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+                span.classList.add('active');
+                renderResults(tag);
+            };
+
+            cloudDiv.appendChild(span);
+        });
+    }
+
+    function renderResults(tag) {
+        const listDiv = document.getElementById('results');
+        const header = document.getElementById('resultsHeader');
+        listDiv.innerHTML = '';
+        
+        const filteredData = globalData.filter(row => row._parsed[currentFilter].includes(tag));
+
+        header.textContent = `Viewing ${filteredData.length} entries for "${tag}"`;
+        header.style.display = 'block';
+
+        filteredData.forEach(row => {
+            const li = document.createElement('li');
+            
+            // Build the visible summary block
+            let html = `
+                <div class="jira-summary">
+                    <span class="jira-id">${row['Jira #']}</span>
+                    <span class="jira-title">${row['Title']}</span>
+                </div>
+                <div class="jira-details">
+            `;
+
+            // Build the hidden details block
+            Object.keys(row).forEach(key => {
+                if (key === '_parsed') return; 
+                const value = row[key];
+                if (!value || value === '#N/A' || value === 'NaN') return;
+
+                let displayValue = value;
+                if (displayValue.startsWith('[{') || displayValue.startsWith('{')) {
+                    try {
+                        let clean = displayValue.replace(/""/g, '"');
+                        displayValue = JSON.stringify(JSON.parse(clean), null, 2);
+                    } catch(e) {}
+                }
+
+                html += `
+                    <div class="detail-row">
+                        <div class="detail-label">${key}</div>
+                        <div class="detail-value">${displayValue}</div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            li.innerHTML = html;
+
+            // Accordion Toggle logic
+            li.querySelector('.jira-summary').addEventListener('click', function() {
+                const isOpen = li.classList.contains('open');
+                // Optional: Close all other open items first to keep it tidy
+                document.querySelectorAll('#results li').forEach(el => el.classList.remove('open'));
+                if (!isOpen) {
+                    li.classList.add('open');
+                }
+            });
+
+            // Stop clicks inside the details panel from closing it
+            li.querySelector('.jira-details').addEventListener('click', function(e) {
+                e.stopPropagation(); 
+            });
+
+            listDiv.appendChild(li);
+        });
+    }
+</script>
+
+</body>
+</html>
