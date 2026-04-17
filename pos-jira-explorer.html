@@ -250,16 +250,17 @@
         }
     }
 
-    // --- NEW: ISOLATED FILTER LOGIC ---
-    // You can modify this function later to add ticket numbers or complex rules
+    // --- UPDATED PRE-FILTER LOGIC ---
     function passesPreFilter(row) {
-        if (!isFocusModeActive) return true; // If toggle is off, allow all rows
+        if (!isFocusModeActive) return true; 
         
-        // Ensure we handle case formatting gracefully
-        const labels = row._parsed.Labels.map(l => l.toLowerCase());
+        // Jira often exports labels with underscores instead of hyphens.
+        // Doing a flexible text search on the raw string is much safer!
+        const rawLabels = String(row['Labels (condensed)'] || '').toLowerCase();
         
-        // Add more conditions here later!
-        return labels.includes('pro-services-top-bug');
+        return rawLabels.includes('pro-services-top-bug') || 
+               rawLabels.includes('pro_services_top_bug') ||
+               rawLabels.includes('pro-services');
     }
 
     document.getElementById('csvFile').addEventListener('change', function(e) {
