@@ -56,6 +56,35 @@
 
         select:focus { border-color: #007aff; }
 
+        /* Custom Toggle Checkbox */
+        .focus-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eaeaea;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .focus-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #007aff;
+        }
+
+        .focus-toggle-text {
+            font-size: 0.9rem;
+            color: #111;
+        }
+        
+        .focus-toggle-subtext {
+            font-size: 0.75rem;
+            color: #777;
+            margin: 2px 0 0 26px;
+        }
+
         /* Tag Cloud */
         #tagCloud {
             display: flex;
@@ -186,6 +215,14 @@
                 <option value="Components">Jira Components</option>
             </select>
         </div>
+        
+        <div>
+            <label class="focus-toggle">
+                <input type="checkbox" id="focusToggle" disabled>
+                <span class="focus-toggle-text"><strong>Focus Mode:</strong> Pro Services Top Bugs</span>
+            </label>
+            <div class="focus-toggle-subtext">Restricts the entire dataset to only show these specific cases.</div>
+        </div>
     </div>
 
     <div id="tagCloud"></div>
@@ -197,6 +234,7 @@
 <script>
     let globalData = [];
     let currentFilter = 'Items';
+    let isFocusModeActive = false;
 
     function cleanArrayString(str) {
         if (!str || str === '#N/A' || typeof str !== 'string') return [];
@@ -210,6 +248,18 @@
         } catch (e) {
             return { Pages: [], Items: [], Suggestions: [] };
         }
+    }
+
+    // --- NEW: ISOLATED FILTER LOGIC ---
+    // You can modify this function later to add ticket numbers or complex rules
+    function passesPreFilter(row) {
+        if (!isFocusModeActive) return true; // If toggle is off, allow all rows
+        
+        // Ensure we handle case formatting gracefully
+        const labels = row._parsed.Labels.map(l => l.toLowerCase());
+        
+        // Add more conditions here later!
+        return labels.includes('pro-services-top-bug');
     }
 
     document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -235,6 +285,7 @@
                 });
                 
                 document.getElementById('filterSelect').disabled = false;
+                document.getElementById('focusToggle').disabled = false;
                 renderTagCloud();
             }
         });
@@ -242,10 +293,20 @@
 
     document.getElementById('filterSelect').addEventListener('change', function(e) {
         currentFilter = e.target.value;
-        document.getElementById('results').innerHTML = '';
-        document.getElementById('resultsHeader').style.display = 'none';
+        clearResults();
         renderTagCloud();
     });
+
+    document.getElementById('focusToggle').addEventListener('change', function(e) {
+        isFocusModeActive = e.target.checked;
+        clearResults();
+        renderTagCloud();
+    });
+
+    function clearResults() {
+        document.getElementById('results').innerHTML = '';
+        document.getElementById('resultsHeader').style.display = 'none';
+    }
 
     function renderTagCloud() {
         const cloudDiv = document.getElementById('tagCloud');
@@ -254,7 +315,10 @@
         let tagCounts = {};
         let maxCount = 0;
 
-        globalData.forEach(row => {
+        // Apply pre-filter logic here
+        const activeData = globalData.filter(passesPreFilter);
+
+        activeData.forEach(row => {
             const tags = row._parsed[currentFilter] || [];
             tags.forEach(tag => {
                 if (!tag || tag === 'TBD') return; 
@@ -262,6 +326,12 @@
                 if (tagCounts[tag] > maxCount) maxCount = tagCounts[tag];
             });
         });
+
+        // Hide cloud if no results
+        if (Object.keys(tagCounts).length === 0) {
+            cloudDiv.innerHTML = `<p style="color: #777; font-size: 0.9rem;">No tags found for the current selection.</p>`;
+            return;
+        }
 
         Object.keys(tagCounts).sort().forEach(tag => {
             const count = tagCounts[tag];
@@ -279,19 +349,19 @@
             span.onclick = () => {
                 document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
                 span.classList.add('active');
-                renderResults(tag);
+                renderResults(tag, activeData);
             };
 
             cloudDiv.appendChild(span);
         });
     }
 
-    function renderResults(tag) {
+    function renderResults(tag, activeData) {
         const listDiv = document.getElementById('results');
         const header = document.getElementById('resultsHeader');
         listDiv.innerHTML = '';
         
-        const filteredData = globalData.filter(row => row._parsed[currentFilter].includes(tag));
+        const filteredData = activeData.filter(row => row._parsed[currentFilter].includes(tag));
 
         header.textContent = `Viewing ${filteredData.length} entries for "${tag}"`;
         header.style.display = 'block';
@@ -299,7 +369,6 @@
         filteredData.forEach(row => {
             const li = document.createElement('li');
             
-            // Build the visible summary block
             let html = `
                 <div class="jira-summary">
                     <span class="jira-id">${row['Jira #']}</span>
@@ -308,7 +377,6 @@
                 <div class="jira-details">
             `;
 
-            // Build the hidden details block
             Object.keys(row).forEach(key => {
                 if (key === '_parsed') return; 
                 const value = row[key];
@@ -333,17 +401,14 @@
             html += `</div>`;
             li.innerHTML = html;
 
-            // Accordion Toggle logic
             li.querySelector('.jira-summary').addEventListener('click', function() {
                 const isOpen = li.classList.contains('open');
-                // Optional: Close all other open items first to keep it tidy
                 document.querySelectorAll('#results li').forEach(el => el.classList.remove('open'));
                 if (!isOpen) {
                     li.classList.add('open');
                 }
             });
 
-            // Stop clicks inside the details panel from closing it
             li.querySelector('.jira-details').addEventListener('click', function(e) {
                 e.stopPropagation(); 
             });
