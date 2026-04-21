@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS Concept Explorer v8</title>
+    <title>Enhancement Request Visualizer v9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
@@ -56,30 +56,47 @@
         .jira-title { color: #333; font-size: 0.85rem; white-space: normal; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         
         /* Details View */
-        .jira-details { display: none; padding: 15px; background: #f9fbfc; border-top: 1px solid #eaeaea; font-size: 0.8rem; color: #555; cursor: text; }
+        .jira-details { display: none; padding: 10px 15px; background: #f9fbfc; border-top: 1px solid #eaeaea; font-size: 0.8rem; color: #555; cursor: text; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         #results > li.open .jira-details { display: block; }
         #results > li.open { border-color: #007aff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
-        .detail-row { margin-bottom: 12px; }
-        .detail-label { font-weight: bold; color: #111; margin-bottom: 2px; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; font-family: -apple-system, sans-serif; }
-        .detail-value { white-space: pre-wrap; word-wrap: break-word; }
+        
+        /* Sub-Expanders (details/summary) */
+        .sub-expander { margin-bottom: 8px; border: 1px solid #eaeaea; border-radius: 6px; background: #fff; overflow: hidden; }
+        .sub-expander summary { padding: 8px 12px; font-weight: 600; font-size: 0.8rem; color: #333; background: #f0f4f8; cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; }
+        .sub-expander summary::-webkit-details-marker { display: none; }
+        .sub-expander summary::before { content: "▶"; display: inline-block; margin-right: 8px; font-size: 0.7rem; color: #888; transition: transform 0.2s; }
+        .sub-expander[open] summary::before { transform: rotate(90deg); }
+        .sub-expander[open] summary { border-bottom: 1px solid #eaeaea; }
+        .sub-content { padding: 12px; font-size: 0.8rem; white-space: normal; line-height: 1.4; color: #444; }
+        
+        /* Data Formatting Classes */
+        .formatted-list { margin: 0; padding-left: 20px; }
+        .formatted-list li { margin-bottom: 4px; font-family: monospace; }
+        .key-val-list { display: grid; grid-template-columns: 1fr; gap: 6px; }
+        .kv-item { background: #f8f9fa; padding: 6px 8px; border-radius: 4px; border: 1px solid #eee; }
+        .kv-key { font-weight: 600; color: #555; margin-right: 5px; }
+        
+        .comment-item { border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+        .comment-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .comment-time { font-size: 0.7rem; color: #888; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
+        .comment-text { white-space: pre-wrap; font-family: monospace; }
 
-        /* Sub-Records (Related Jiras) */
-        .related-container { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
+        /* Related Jiras */
+        .related-container { display: flex; flex-direction: column; gap: 8px; }
         .sub-record { border: 1px solid #cce4ff; border-radius: 6px; background: #ffffff; overflow: hidden; }
         .sub-record-summary { padding: 10px; background: #f0f7ff; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s; }
         .sub-record-summary:hover { background: #e1f0ff; }
-        .sub-record-summary .jira-id { color: #0056b3; font-size: 0.85rem; }
+        .sub-record-summary .jira-id { color: #0056b3; font-size: 0.85rem; font-family: monospace; font-weight: bold;}
         .sub-record-summary .jira-title { font-size: 0.8rem; color: #333; }
         .sub-record-details { display: none; padding: 12px; border-top: 1px solid #eaeaea; }
         .sub-record.open > .sub-record-details { display: block; }
-        .unlinked-jira { font-family: monospace; background: #eaeaea; color: #555; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; display: inline-block; }
-
+        .unlinked-jira { font-family: monospace; background: #eaeaea; color: #555; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; display: inline-block; margin-bottom: 4px;}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>POS Concept Explorer <span class="version-tag">v8</span></h1>
+    <h1>Enhancement Request Visualizer <span class="version-tag">v9</span></h1>
     
     <div class="controls">
         <div class="view-toggle">
@@ -121,7 +138,7 @@
         <div>
             <label class="focus-toggle">
                 <input type="checkbox" id="focusToggle" disabled>
-                <span class="focus-toggle-text"><strong>Focus Mode:</strong> Pro Services Top Bugs</span>
+                <span class="focus-toggle-text"><strong>Focus Mode:</strong> Pro-Services</span>
             </label>
             <div class="focus-toggle-subtext">Restricts the entire dataset to only show these specific cases.</div>
         </div>
@@ -144,16 +161,82 @@
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
 
+    // --- Data Parsing Utils ---
     function cleanArrayString(str) {
         if (!str || str === '#N/A' || typeof str !== 'string') return [];
         return str.replace(/^\[|\]$/g, '').split(',').map(s => s.trim()).filter(s => s);
     }
 
     function safeJSONParse(str) {
+        if (!str || str === '#N/A') return null;
         try { return JSON.parse(str.replace(/""/g, '"')); } 
-        catch (e) { return { Pages: [], Items: [], Suggestions: [] }; }
+        catch (e) { return null; }
     }
 
+    // --- Human Readable Formatters ---
+    function formatContext(contextStr) {
+        let obj = safeJSONParse(contextStr);
+        if (!obj) return contextStr;
+        let html = '';
+        Object.keys(obj).forEach(k => {
+            if (obj[k] && obj[k].length > 0) {
+                html += `<strong>${k}:</strong><ul class="formatted-list">`;
+                obj[k].forEach(item => html += `<li>${item}</li>`);
+                html += `</ul>`;
+            }
+        });
+        return html || 'No context mapped.';
+    }
+
+    function formatCustomFields(fieldStr) {
+        let arr = safeJSONParse(fieldStr);
+        if (!Array.isArray(arr)) return fieldStr;
+        let html = '<div class="key-val-list">';
+        arr.forEach(item => {
+            let key = Object.keys(item)[0];
+            let val = item[key];
+            // Skip boring system approvals and empty objects
+            if (val === "{}" || key.includes("Approvals") || val === "N/A" || val === "TBD") return;
+            key = key.replace('Custom field (', '').replace(')', '');
+            html += `<div class="kv-item"><span class="kv-key">${key}:</span> ${val}</div>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function formatComments(commentStr) {
+        let arr = safeJSONParse(commentStr);
+        if (!Array.isArray(arr)) return commentStr;
+        let html = '';
+        arr.forEach(item => {
+            let key = Object.keys(item)[0];
+            let val = item[key];
+            let time = key === 'Comment' ? '' : key;
+            let text = val;
+            
+            // Clean up Jira's semicolon-delimited user strings if present
+            if (typeof text === 'string' && text.includes(';')) {
+                let parts = text.split(';');
+                if (key === 'Comment') time = parts[0]; // Format: timestamp;user;text
+                text = parts[parts.length - 1]; // Usually the text is the last chunk
+                // Clean out accountid tags
+                text = text.replace(/\[~accountid:.*?\]/g, 'User ');
+            }
+            html += `<div class="comment-item">
+                        <div class="comment-time">${time}</div>
+                        <div class="comment-text">${text}</div>
+                     </div>`;
+        });
+        return html || 'No comments.';
+    }
+
+    function formatSimpleList(str) {
+        let arr = cleanArrayString(str);
+        if (arr.length === 0) return 'None';
+        return `<ul class="formatted-list">` + arr.map(a => `<li>${a}</li>`).join('') + `</ul>`;
+    }
+
+    // --- App Logic ---
     function passesPreFilter(row) {
         if (!isFocusModeActive) return true; 
         const labels = row._parsed.Labels.map(l => l.toLowerCase());
@@ -163,33 +246,46 @@
         );
     }
 
-    // Dynamic Content Renderer for Detail Views
+    // Builds the nested Expanders
     function buildDetailsHtml(row, isSubRecord = false) {
         let html = '';
-        Object.keys(row).forEach(key => {
-            if (key === '_parsed' || key === '_rawSearchText' || key === 'Related Jira (condensed)') return; 
-            const value = row[key];
-            if (!value || value === '#N/A' || value === 'NaN') return;
+        const sections = [
+            { key: 'Description (condensed)', label: 'Description', format: val => `<div style="white-space: pre-wrap;">${val}</div>` },
+            { key: 'POS_Context_JSON', label: 'POS Context Mapping', format: formatContext },
+            { key: 'Labels (condensed)', label: 'Labels', format: formatSimpleList },
+            { key: 'Components (condensed)', label: 'Components', format: formatSimpleList },
+            { key: 'Custom Fields (condensed)', label: 'Custom Fields', format: formatCustomFields },
+            { key: 'Comments (condensed)', label: 'Comments', format: formatComments }
+        ];
 
-            let displayValue = value;
-            if (displayValue.startsWith('[{') || displayValue.startsWith('{')) {
-                try { displayValue = JSON.stringify(JSON.parse(displayValue.replace(/""/g, '"')), null, 2); } catch(e) {}
+        sections.forEach(sec => {
+            let val = row[sec.key];
+            if (val && val !== '#N/A' && val !== 'NaN' && val !== '[]') {
+                html += `
+                    <details class="sub-expander">
+                        <summary>${sec.label}</summary>
+                        <div class="sub-content">${sec.format(val)}</div>
+                    </details>
+                `;
             }
-            html += `<div class="detail-row"><div class="detail-label">${key}</div><div class="detail-value">${displayValue}</div></div>`;
         });
 
-        // Add Related Jiras at the bottom (Preventing recursive infinite loops by enforcing depth limit)
+        // Related Jiras Section
         if (!isSubRecord && row['Related Jira (condensed)'] && row['Related Jira (condensed)'] !== '#N/A') {
             let relatedIds = cleanArrayString(row['Related Jira (condensed)']);
             if (relatedIds.length > 0) {
-                html += `<div class="detail-row"><div class="detail-label">Related Jiras</div><div class="related-container">`;
+                html += `
+                    <details class="sub-expander">
+                        <summary>Related Jira Tickets (${relatedIds.length})</summary>
+                        <div class="sub-content related-container">
+                `;
                 relatedIds.forEach(relId => {
                     let relData = globalData.find(d => d['Jira #'] === relId);
                     if (relData) {
                         html += `
                             <div class="sub-record">
                                 <div class="sub-record-summary" onclick="this.parentElement.classList.toggle('open'); event.stopPropagation();">
-                                    <span class="jira-id">↳ ${relData['Jira #']} (Click to expand)</span>
+                                    <span class="jira-id">↳ ${relData['Jira #']}</span>
                                     <span class="jira-title">${relData['Title']}</span>
                                 </div>
                                 <div class="sub-record-details" onclick="event.stopPropagation();">
@@ -198,10 +294,10 @@
                             </div>
                         `;
                     } else {
-                        html += `<div><span class="unlinked-jira">↳ ${relId} (Not present in dataset)</span></div>`;
+                        html += `<span class="unlinked-jira">↳ ${relId} (Not exported in dataset)</span>`;
                     }
                 });
-                html += `</div></div>`;
+                html += `</div></details>`;
             }
         }
         return html;
@@ -232,8 +328,8 @@
                         ...row,
                         _rawSearchText: JSON.stringify(row).toLowerCase(),
                         _parsed: {
-                            Items: parsedContext.Items || [], Pages: parsedContext.Pages || [],
-                            Suggestions: parsedContext.Suggestions || [],
+                            Items: parsedContext?.Items || [], Pages: parsedContext?.Pages || [],
+                            Suggestions: parsedContext?.Suggestions || [],
                             Labels: cleanArrayString(row['Labels (condensed)']),
                             Components: cleanArrayString(row['Components (condensed)'])
                         }
@@ -292,15 +388,26 @@
             return;
         }
 
-        let counts = Object.values(tagCounts);
-        let average = counts.reduce((a, b) => a + b, 0) / counts.length;
-        let leaderThreshold = average * 2.5; 
+        // --- NEW 20% GAP MATH LOGIC ---
+        let uniqueFrequencies = [...new Set(Object.values(tagCounts))].sort((a, b) => a - b);
+        let maxCountValue = uniqueFrequencies[uniqueFrequencies.length - 1];
+        let leaderThreshold = maxCountValue + 1; // Default to no leaders
+
+        // Look for the largest gap starting from the top down
+        for (let i = uniqueFrequencies.length - 1; i > 0; i--) {
+            let gap = uniqueFrequencies[i] - uniqueFrequencies[i-1];
+            // If the jump to the next highest number is 20% or more of the overall maximum
+            if (gap >= (maxCountValue * 0.20)) {
+                leaderThreshold = uniqueFrequencies[i];
+                break;
+            }
+        }
         
         let regularTags = {};
         let leaders = [];
 
         Object.keys(tagCounts).forEach(tag => {
-            if (isHideLeadersActive && tagCounts[tag] >= leaderThreshold && counts.length > 3) {
+            if (isHideLeadersActive && tagCounts[tag] >= leaderThreshold && uniqueFrequencies.length > 2) {
                 leaders.push({ tag, count: tagCounts[tag] });
             } else {
                 regularTags[tag] = tagCounts[tag];
@@ -382,9 +489,17 @@
 
             li.querySelector('.jira-summary').addEventListener('click', function() {
                 const isOpen = li.classList.contains('open');
-                document.querySelectorAll('#results > li').forEach(el => el.classList.remove('open'));
+                
+                // Close all others and reset their internal sub-expanders
+                document.querySelectorAll('#results > li').forEach(el => {
+                    el.classList.remove('open');
+                    el.querySelectorAll('details').forEach(d => d.open = false);
+                    el.querySelectorAll('.sub-record').forEach(sr => sr.classList.remove('open'));
+                });
+                
                 if (!isOpen) li.classList.add('open');
             });
+            
             li.querySelector('.jira-details').addEventListener('click', e => e.stopPropagation());
             listDiv.appendChild(li);
         });
