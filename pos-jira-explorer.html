@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS Concept Explorer v7</title>
+    <title>POS Concept Explorer v8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
@@ -49,23 +49,37 @@
         /* Results Area */
         #resultsHeader { font-weight: 600; margin-bottom: 15px; color: #555; display: none; }
         #results { list-style: none; padding: 0; margin: 0; }
-        #results li { font-family: Consolas, "SFMono-Regular", monospace; background: #fdfdfd; border: 1px solid #eaeaea; border-radius: 6px; margin-bottom: 10px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
-        #results li:hover { border-color: #007aff; }
+        #results > li { font-family: Consolas, "SFMono-Regular", monospace; background: #fdfdfd; border: 1px solid #eaeaea; border-radius: 6px; margin-bottom: 10px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
+        #results > li:hover { border-color: #007aff; }
         .jira-summary { padding: 12px 15px; display: flex; flex-direction: column; gap: 5px; }
         .jira-id { color: #007aff; font-weight: bold; font-size: 0.9rem; }
-        .jira-title { color: #333; font-size: 0.85rem; white-space: normal; }
+        .jira-title { color: #333; font-size: 0.85rem; white-space: normal; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        /* Details View */
         .jira-details { display: none; padding: 15px; background: #f9fbfc; border-top: 1px solid #eaeaea; font-size: 0.8rem; color: #555; cursor: text; }
-        #results li.open .jira-details { display: block; }
-        #results li.open { border-color: #007aff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
-        .detail-row { margin-bottom: 10px; }
-        .detail-label { font-weight: bold; color: #111; margin-bottom: 2px; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; }
+        #results > li.open .jira-details { display: block; }
+        #results > li.open { border-color: #007aff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
+        .detail-row { margin-bottom: 12px; }
+        .detail-label { font-weight: bold; color: #111; margin-bottom: 2px; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; font-family: -apple-system, sans-serif; }
         .detail-value { white-space: pre-wrap; word-wrap: break-word; }
+
+        /* Sub-Records (Related Jiras) */
+        .related-container { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
+        .sub-record { border: 1px solid #cce4ff; border-radius: 6px; background: #ffffff; overflow: hidden; }
+        .sub-record-summary { padding: 10px; background: #f0f7ff; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s; }
+        .sub-record-summary:hover { background: #e1f0ff; }
+        .sub-record-summary .jira-id { color: #0056b3; font-size: 0.85rem; }
+        .sub-record-summary .jira-title { font-size: 0.8rem; color: #333; }
+        .sub-record-details { display: none; padding: 12px; border-top: 1px solid #eaeaea; }
+        .sub-record.open > .sub-record-details { display: block; }
+        .unlinked-jira { font-family: monospace; background: #eaeaea; color: #555; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; display: inline-block; }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>POS Concept Explorer <span class="version-tag">v7</span></h1>
+    <h1>POS Concept Explorer <span class="version-tag">v8</span></h1>
     
     <div class="controls">
         <div class="view-toggle">
@@ -125,12 +139,9 @@
     let currentFilter = 'Items';
     let isFocusModeActive = false;
     let isHideLeadersActive = false;
-    let currentMode = 'cloud'; // 'cloud' or 'search'
+    let currentMode = 'cloud'; 
 
-    // Hardcoded exclusions that will never appear in the Word Cloud
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
-
-    // Also hide these from the cloud *only* when Focus Mode is active
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
 
     function cleanArrayString(str) {
@@ -143,7 +154,6 @@
         catch (e) { return { Pages: [], Items: [], Suggestions: [] }; }
     }
 
-    // Pro-Services Pre-Filter
     function passesPreFilter(row) {
         if (!isFocusModeActive) return true; 
         const labels = row._parsed.Labels.map(l => l.toLowerCase());
@@ -153,21 +163,63 @@
         );
     }
 
-    // View Mode Switcher
+    // Dynamic Content Renderer for Detail Views
+    function buildDetailsHtml(row, isSubRecord = false) {
+        let html = '';
+        Object.keys(row).forEach(key => {
+            if (key === '_parsed' || key === '_rawSearchText' || key === 'Related Jira (condensed)') return; 
+            const value = row[key];
+            if (!value || value === '#N/A' || value === 'NaN') return;
+
+            let displayValue = value;
+            if (displayValue.startsWith('[{') || displayValue.startsWith('{')) {
+                try { displayValue = JSON.stringify(JSON.parse(displayValue.replace(/""/g, '"')), null, 2); } catch(e) {}
+            }
+            html += `<div class="detail-row"><div class="detail-label">${key}</div><div class="detail-value">${displayValue}</div></div>`;
+        });
+
+        // Add Related Jiras at the bottom (Preventing recursive infinite loops by enforcing depth limit)
+        if (!isSubRecord && row['Related Jira (condensed)'] && row['Related Jira (condensed)'] !== '#N/A') {
+            let relatedIds = cleanArrayString(row['Related Jira (condensed)']);
+            if (relatedIds.length > 0) {
+                html += `<div class="detail-row"><div class="detail-label">Related Jiras</div><div class="related-container">`;
+                relatedIds.forEach(relId => {
+                    let relData = globalData.find(d => d['Jira #'] === relId);
+                    if (relData) {
+                        html += `
+                            <div class="sub-record">
+                                <div class="sub-record-summary" onclick="this.parentElement.classList.toggle('open'); event.stopPropagation();">
+                                    <span class="jira-id">↳ ${relData['Jira #']} (Click to expand)</span>
+                                    <span class="jira-title">${relData['Title']}</span>
+                                </div>
+                                <div class="sub-record-details" onclick="event.stopPropagation();">
+                                    ${buildDetailsHtml(relData, true)}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `<div><span class="unlinked-jira">↳ ${relId} (Not present in dataset)</span></div>`;
+                    }
+                });
+                html += `</div></div>`;
+            }
+        }
+        return html;
+    }
+
     document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             currentMode = e.target.value;
             document.getElementById('cloudControls').style.display = currentMode === 'cloud' ? 'block' : 'none';
             document.getElementById('searchControls').style.display = currentMode === 'search' ? 'block' : 'none';
             document.getElementById('tagCloud').style.display = currentMode === 'cloud' ? 'flex' : 'none';
-            document.getElementById('leaderBoard').style.display = 'none'; // hide until recalculated
+            document.getElementById('leaderBoard').style.display = 'none'; 
             clearResults();
             if (currentMode === 'cloud' && globalData.length > 0) renderTagCloud();
             if (currentMode === 'search' && globalData.length > 0) handleSearch();
         });
     });
 
-    // File Upload
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -178,7 +230,7 @@
                     const parsedContext = safeJSONParse(row['POS_Context_JSON']);
                     return {
                         ...row,
-                        _rawSearchText: JSON.stringify(row).toLowerCase(), // cache for fast searching
+                        _rawSearchText: JSON.stringify(row).toLowerCase(),
                         _parsed: {
                             Items: parsedContext.Items || [], Pages: parsedContext.Pages || [],
                             Suggestions: parsedContext.Suggestions || [],
@@ -196,7 +248,6 @@
         });
     });
 
-    // Listeners
     document.getElementById('filterSelect').addEventListener('change', e => { currentFilter = e.target.value; clearResults(); renderTagCloud(); });
     document.getElementById('hideLeadersToggle').addEventListener('change', e => { isHideLeadersActive = e.target.checked; renderTagCloud(); });
     document.getElementById('searchInput').addEventListener('input', () => { if(currentMode === 'search') handleSearch(); });
@@ -212,7 +263,6 @@
         document.getElementById('resultsHeader').style.display = 'none';
     }
 
-    // Render Cloud & Leaders
     function renderTagCloud() {
         if(currentMode !== 'cloud') return;
         const cloudDiv = document.getElementById('tagCloud');
@@ -224,14 +274,12 @@
         let tagCounts = {};
         const activeData = globalData.filter(passesPreFilter);
 
-        // Count tags
         activeData.forEach(row => {
             const tags = row._parsed[currentFilter] || [];
             tags.forEach(tag => {
                 if (!tag || tag === 'TBD') return; 
                 let cleanTag = tag.toLowerCase();
                 
-                // Exclusions
                 if (hardExclusions.includes(cleanTag)) return;
                 if (isFocusModeActive && currentFilter === 'Labels' && focusExclusions.includes(cleanTag)) return;
 
@@ -244,10 +292,9 @@
             return;
         }
 
-        // Leader Logic Math
         let counts = Object.values(tagCounts);
         let average = counts.reduce((a, b) => a + b, 0) / counts.length;
-        let leaderThreshold = average * 2.5; // If a tag is 2.5x more common than average, it's a leader
+        let leaderThreshold = average * 2.5; 
         
         let regularTags = {};
         let leaders = [];
@@ -260,7 +307,6 @@
             }
         });
 
-        // Render Leaders if any
         if (leaders.length > 0) {
             leaderBoard.style.display = 'flex';
             leaders.sort((a,b) => b.count - a.count).forEach(l => {
@@ -276,7 +322,6 @@
             });
         }
 
-        // Render remaining Cloud
         let maxCount = Math.max(...Object.values(regularTags), 1);
         Object.keys(regularTags).sort().forEach(tag => {
             const count = regularTags[tag];
@@ -299,7 +344,6 @@
         });
     }
 
-    // Search Logic
     function handleSearch() {
         const term = document.getElementById('searchInput').value.toLowerCase().trim();
         const activeData = globalData.filter(passesPreFilter);
@@ -310,7 +354,6 @@
         renderResults(term, filteredData, 'search');
     }
 
-    // Output List
     function renderResults(queryTerm, dataToRender, mode) {
         const listDiv = document.getElementById('results');
         const header = document.getElementById('resultsHeader');
@@ -332,24 +375,14 @@
                     <span class="jira-title">${row['Title']}</span>
                 </div>
                 <div class="jira-details">
+                    ${buildDetailsHtml(row)}
+                </div>
             `;
-            Object.keys(row).forEach(key => {
-                if (key === '_parsed' || key === '_rawSearchText') return; 
-                const value = row[key];
-                if (!value || value === '#N/A' || value === 'NaN') return;
-
-                let displayValue = value;
-                if (displayValue.startsWith('[{') || displayValue.startsWith('{')) {
-                    try { displayValue = JSON.stringify(JSON.parse(displayValue.replace(/""/g, '"')), null, 2); } catch(e) {}
-                }
-                html += `<div class="detail-row"><div class="detail-label">${key}</div><div class="detail-value">${displayValue}</div></div>`;
-            });
-            html += `</div>`;
             li.innerHTML = html;
 
             li.querySelector('.jira-summary').addEventListener('click', function() {
                 const isOpen = li.classList.contains('open');
-                document.querySelectorAll('#results li').forEach(el => el.classList.remove('open'));
+                document.querySelectorAll('#results > li').forEach(el => el.classList.remove('open'));
                 if (!isOpen) li.classList.add('open');
             });
             li.querySelector('.jira-details').addEventListener('click', e => e.stopPropagation());
