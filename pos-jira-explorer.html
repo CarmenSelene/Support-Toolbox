@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS Concept Explorer v6</title>
+    <title>POS Concept Explorer v7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
@@ -11,17 +11,42 @@
         .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 30px; }
         h1 { margin-top: 0; font-size: 1.5rem; color: #111; display: flex; align-items: center; justify-content: space-between;}
         .version-tag { font-size: 0.85rem; font-weight: normal; color: #999; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; }
-        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eaeaea; }
-        input[type="file"] { font-family: inherit; font-size: 0.9rem; }
+        
+        /* Layout Controls */
+        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eaeaea; }
+        input[type="file"], input[type="text"] { font-family: inherit; font-size: 0.9rem; }
         select { font-family: inherit; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.95rem; width: 100%; outline: none; }
         select:focus { border-color: #007aff; }
+        
+        /* View Mode Segmented Control */
+        .view-toggle { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 10px; }
+        .view-toggle label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; }
+        .view-toggle input[type="radio"] { display: none; }
+        .view-toggle input[type="radio"]:checked + label { background: #fff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Search Box */
+        .search-container { display: none; }
+        .search-box { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; outline: none; }
+        .search-box:focus { border-color: #007aff; }
+
+        /* Toggles */
         .focus-toggle { display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px dashed #eaeaea; cursor: pointer; user-select: none; }
         .focus-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #007aff; }
         .focus-toggle-text { font-size: 0.9rem; color: #111; }
         .focus-toggle-subtext { font-size: 0.75rem; color: #777; margin: 2px 0 0 26px; }
+
+        /* Leaders Board */
+        #leaderBoard { display: none; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; padding: 12px; background: #f8faff; border: 1px solid #e1efff; border-radius: 6px; }
+        .leader-title { width: 100%; font-size: 0.75rem; text-transform: uppercase; color: #007aff; font-weight: bold; margin-bottom: 4px; }
+        .leader-tag { font-size: 0.85rem; background: #fff; border: 1px solid #cce4ff; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: #0056b3; transition: all 0.2s; }
+        .leader-tag:hover, .leader-tag.active { background: #007aff; color: #fff; border-color: #007aff; }
+
+        /* Tag Cloud */
         #tagCloud { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; }
         .tag { cursor: pointer; color: #007aff; transition: all 0.2s ease; user-select: none; text-align: center; line-height: 1.2; }
         .tag:hover, .tag.active { color: #0056b3; text-decoration: underline; transform: scale(1.05); }
+        
+        /* Results Area */
         #resultsHeader { font-weight: 600; margin-bottom: 15px; color: #555; display: none; }
         #results { list-style: none; padding: 0; margin: 0; }
         #results li { font-family: Consolas, "SFMono-Regular", monospace; background: #fdfdfd; border: 1px solid #eaeaea; border-radius: 6px; margin-bottom: 10px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
@@ -40,22 +65,43 @@
 <body>
 
 <div class="container">
-    <h1>POS Concept Explorer <span class="version-tag">v6</span></h1>
+    <h1>POS Concept Explorer <span class="version-tag">v7</span></h1>
     
     <div class="controls">
+        <div class="view-toggle">
+            <input type="radio" id="viewCloud" name="viewMode" value="cloud" checked>
+            <label for="viewCloud">Tag Cloud</label>
+            <input type="radio" id="viewSearch" name="viewMode" value="search">
+            <label for="viewSearch">Deep Search</label>
+        </div>
+
         <div>
             <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">1. Load Jira CSV Data</label>
             <input type="file" id="csvFile" accept=".csv">
         </div>
-        <div>
-            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">2. Filter By Grouping</label>
-            <select id="filterSelect" disabled>
-                <option value="Items">Context Items</option>
-                <option value="Pages">Context Pages</option>
-                <option value="Suggestions">Context Suggestions</option>
-                <option value="Labels">Jira Labels</option>
-                <option value="Components">Jira Components</option>
-            </select>
+
+        <div id="cloudControls">
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">2. Filter By Grouping</label>
+                <select id="filterSelect" disabled>
+                    <option value="Items">Context Items</option>
+                    <option value="Pages">Context Pages</option>
+                    <option value="Suggestions">Context Suggestions</option>
+                    <option value="Labels">Jira Labels</option>
+                    <option value="Components">Jira Components</option>
+                </select>
+            </div>
+            <div>
+                <label class="focus-toggle" style="border-top: none; padding-top: 5px;">
+                    <input type="checkbox" id="hideLeadersToggle" disabled>
+                    <span class="focus-toggle-text"><strong>Hide Leaders:</strong> Remove outliers to view nuances</span>
+                </label>
+            </div>
+        </div>
+
+        <div id="searchControls" class="search-container">
+            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">2. Search Entire Jira Context</label>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search keywords, labels, JSON..." disabled>
         </div>
         
         <div>
@@ -63,11 +109,13 @@
                 <input type="checkbox" id="focusToggle" disabled>
                 <span class="focus-toggle-text"><strong>Focus Mode:</strong> Pro Services Top Bugs</span>
             </label>
-            <div class="focus-toggle-subtext">Restricts the dataset to only show these specific cases.</div>
+            <div class="focus-toggle-subtext">Restricts the entire dataset to only show these specific cases.</div>
         </div>
     </div>
 
+    <div id="leaderBoard"></div>
     <div id="tagCloud"></div>
+    
     <div id="resultsHeader"></div>
     <ul id="results"></ul>
 </div>
@@ -76,6 +124,14 @@
     let globalData = [];
     let currentFilter = 'Items';
     let isFocusModeActive = false;
+    let isHideLeadersActive = false;
+    let currentMode = 'cloud'; // 'cloud' or 'search'
+
+    // Hardcoded exclusions that will never appear in the Word Cloud
+    const hardExclusions = ['jira_escalated', 'jira-escalated'];
+
+    // Also hide these from the cloud *only* when Focus Mode is active
+    const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
 
     function cleanArrayString(str) {
         if (!str || str === '#N/A' || typeof str !== 'string') return [];
@@ -83,67 +139,72 @@
     }
 
     function safeJSONParse(str) {
-        try {
-            let clean = str.replace(/""/g, '"');
-            return JSON.parse(clean);
-        } catch (e) {
-            return { Pages: [], Items: [], Suggestions: [] };
-        }
+        try { return JSON.parse(str.replace(/""/g, '"')); } 
+        catch (e) { return { Pages: [], Items: [], Suggestions: [] }; }
     }
 
-    // --- TARGETED LABELS PRE-FILTER LOGIC ---
+    // Pro-Services Pre-Filter
     function passesPreFilter(row) {
         if (!isFocusModeActive) return true; 
-        
         const labels = row._parsed.Labels.map(l => l.toLowerCase());
-        
         return labels.some(label => 
-            label.includes('proservices-top-bugs') ||
-            label.includes('proservices_top_bugs') ||
-            label.includes('pro-serve-top-bugs') ||
-            label.includes('pro_serve_top_bugs')
+            label.includes('proservices-top-bugs') || label.includes('proservices_top_bugs') ||
+            label.includes('pro-serve-top-bugs') || label.includes('pro_serve_top_bugs')
         );
     }
 
+    // View Mode Switcher
+    document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentMode = e.target.value;
+            document.getElementById('cloudControls').style.display = currentMode === 'cloud' ? 'block' : 'none';
+            document.getElementById('searchControls').style.display = currentMode === 'search' ? 'block' : 'none';
+            document.getElementById('tagCloud').style.display = currentMode === 'cloud' ? 'flex' : 'none';
+            document.getElementById('leaderBoard').style.display = 'none'; // hide until recalculated
+            clearResults();
+            if (currentMode === 'cloud' && globalData.length > 0) renderTagCloud();
+            if (currentMode === 'search' && globalData.length > 0) handleSearch();
+        });
+    });
+
+    // File Upload
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
-
         Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
+            header: true, skipEmptyLines: true,
             complete: function(results) {
                 globalData = results.data.map(row => {
                     const parsedContext = safeJSONParse(row['POS_Context_JSON']);
                     return {
                         ...row,
+                        _rawSearchText: JSON.stringify(row).toLowerCase(), // cache for fast searching
                         _parsed: {
-                            Items: parsedContext.Items || [],
-                            Pages: parsedContext.Pages || [],
+                            Items: parsedContext.Items || [], Pages: parsedContext.Pages || [],
                             Suggestions: parsedContext.Suggestions || [],
                             Labels: cleanArrayString(row['Labels (condensed)']),
                             Components: cleanArrayString(row['Components (condensed)'])
                         }
                     };
                 });
-                
                 document.getElementById('filterSelect').disabled = false;
                 document.getElementById('focusToggle').disabled = false;
-                renderTagCloud();
+                document.getElementById('hideLeadersToggle').disabled = false;
+                document.getElementById('searchInput').disabled = false;
+                if (currentMode === 'cloud') renderTagCloud();
             }
         });
     });
 
-    document.getElementById('filterSelect').addEventListener('change', function(e) {
-        currentFilter = e.target.value;
-        clearResults();
-        renderTagCloud();
-    });
-
-    document.getElementById('focusToggle').addEventListener('change', function(e) {
-        isFocusModeActive = e.target.checked;
-        clearResults();
-        renderTagCloud();
+    // Listeners
+    document.getElementById('filterSelect').addEventListener('change', e => { currentFilter = e.target.value; clearResults(); renderTagCloud(); });
+    document.getElementById('hideLeadersToggle').addEventListener('change', e => { isHideLeadersActive = e.target.checked; renderTagCloud(); });
+    document.getElementById('searchInput').addEventListener('input', () => { if(currentMode === 'search') handleSearch(); });
+    document.getElementById('focusToggle').addEventListener('change', e => { 
+        isFocusModeActive = e.target.checked; 
+        clearResults(); 
+        if(currentMode === 'cloud') renderTagCloud();
+        else handleSearch();
     });
 
     function clearResults() {
@@ -151,78 +212,120 @@
         document.getElementById('resultsHeader').style.display = 'none';
     }
 
+    // Render Cloud & Leaders
     function renderTagCloud() {
+        if(currentMode !== 'cloud') return;
         const cloudDiv = document.getElementById('tagCloud');
+        const leaderBoard = document.getElementById('leaderBoard');
         cloudDiv.innerHTML = '';
+        leaderBoard.innerHTML = '<div class="leader-title">Frequency Leaders</div>';
+        leaderBoard.style.display = 'none';
         
         let tagCounts = {};
-        let maxCount = 0;
-
         const activeData = globalData.filter(passesPreFilter);
-        
-        // Tags to hide from the cloud if Focus Mode is active and we are viewing Labels
-        const hiddenLabels = [
-            'jira_escalated', 'jira-escalated',
-            'proservices-top-bugs', 'proservices_top_bugs',
-            'pro-serve-top-bugs', 'pro_serve_top_bugs'
-        ];
 
+        // Count tags
         activeData.forEach(row => {
             const tags = row._parsed[currentFilter] || [];
             tags.forEach(tag => {
                 if (!tag || tag === 'TBD') return; 
+                let cleanTag = tag.toLowerCase();
                 
-                // --- NEW REDUNDANCY HIDER ---
-                if (isFocusModeActive && currentFilter === 'Labels') {
-                    if (hiddenLabels.includes(tag.toLowerCase())) return;
-                }
+                // Exclusions
+                if (hardExclusions.includes(cleanTag)) return;
+                if (isFocusModeActive && currentFilter === 'Labels' && focusExclusions.includes(cleanTag)) return;
 
                 tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-                if (tagCounts[tag] > maxCount) maxCount = tagCounts[tag];
             });
         });
 
         if (Object.keys(tagCounts).length === 0) {
-            cloudDiv.innerHTML = `<p style="color: #777; font-size: 0.9rem; text-align: center;">No matching data found.<br><br><i>Please check your dataset to ensure these exact labels exist in the "Labels (condensed)" column.</i></p>`;
+            cloudDiv.innerHTML = `<p style="color: #777; font-size: 0.9rem;">No matching data found.</p>`;
             return;
         }
 
-        Object.keys(tagCounts).sort().forEach(tag => {
-            const count = tagCounts[tag];
+        // Leader Logic Math
+        let counts = Object.values(tagCounts);
+        let average = counts.reduce((a, b) => a + b, 0) / counts.length;
+        let leaderThreshold = average * 2.5; // If a tag is 2.5x more common than average, it's a leader
+        
+        let regularTags = {};
+        let leaders = [];
+
+        Object.keys(tagCounts).forEach(tag => {
+            if (isHideLeadersActive && tagCounts[tag] >= leaderThreshold && counts.length > 3) {
+                leaders.push({ tag, count: tagCounts[tag] });
+            } else {
+                regularTags[tag] = tagCounts[tag];
+            }
+        });
+
+        // Render Leaders if any
+        if (leaders.length > 0) {
+            leaderBoard.style.display = 'flex';
+            leaders.sort((a,b) => b.count - a.count).forEach(l => {
+                const span = document.createElement('span');
+                span.className = 'leader-tag';
+                span.textContent = `${l.tag} (${l.count})`;
+                span.onclick = () => {
+                    document.querySelectorAll('.leader-tag, .tag').forEach(t => t.classList.remove('active'));
+                    span.classList.add('active');
+                    renderResults(l.tag, activeData, 'cloud');
+                };
+                leaderBoard.appendChild(span);
+            });
+        }
+
+        // Render remaining Cloud
+        let maxCount = Math.max(...Object.values(regularTags), 1);
+        Object.keys(regularTags).sort().forEach(tag => {
+            const count = regularTags[tag];
             const span = document.createElement('span');
             span.className = 'tag';
             span.textContent = `${tag} (${count})`;
             
-            const minSize = 14;
-            const maxSize = 28;
+            const minSize = 14, maxSize = 28;
             const size = minSize + ((count / maxCount) * (maxSize - minSize));
             span.style.fontSize = `${size}px`;
             span.style.fontWeight = count > (maxCount / 2) ? '600' : '400';
             span.style.opacity = Math.max(0.6, count / maxCount + 0.3);
 
             span.onclick = () => {
-                document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.leader-tag, .tag').forEach(t => t.classList.remove('active'));
                 span.classList.add('active');
-                renderResults(tag, activeData);
+                renderResults(tag, activeData, 'cloud');
             };
-
             cloudDiv.appendChild(span);
         });
     }
 
-    function renderResults(tag, activeData) {
+    // Search Logic
+    function handleSearch() {
+        const term = document.getElementById('searchInput').value.toLowerCase().trim();
+        const activeData = globalData.filter(passesPreFilter);
+        
+        if (!term) { clearResults(); return; }
+
+        const filteredData = activeData.filter(row => row._rawSearchText.includes(term));
+        renderResults(term, filteredData, 'search');
+    }
+
+    // Output List
+    function renderResults(queryTerm, dataToRender, mode) {
         const listDiv = document.getElementById('results');
         const header = document.getElementById('resultsHeader');
         listDiv.innerHTML = '';
         
-        const filteredData = activeData.filter(row => row._parsed[currentFilter].includes(tag));
+        let filteredData = dataToRender;
+        if (mode === 'cloud') {
+            filteredData = dataToRender.filter(row => row._parsed[currentFilter].includes(queryTerm));
+        }
 
-        header.textContent = `Viewing ${filteredData.length} entries for "${tag}"`;
+        header.textContent = `Viewing ${filteredData.length} entries for "${queryTerm}"`;
         header.style.display = 'block';
 
         filteredData.forEach(row => {
             const li = document.createElement('li');
-            
             let html = `
                 <div class="jira-summary">
                     <span class="jira-id">${row['Jira #']}</span>
@@ -230,43 +333,26 @@
                 </div>
                 <div class="jira-details">
             `;
-
             Object.keys(row).forEach(key => {
-                if (key === '_parsed') return; 
+                if (key === '_parsed' || key === '_rawSearchText') return; 
                 const value = row[key];
                 if (!value || value === '#N/A' || value === 'NaN') return;
 
                 let displayValue = value;
                 if (displayValue.startsWith('[{') || displayValue.startsWith('{')) {
-                    try {
-                        let clean = displayValue.replace(/""/g, '"');
-                        displayValue = JSON.stringify(JSON.parse(clean), null, 2);
-                    } catch(e) {}
+                    try { displayValue = JSON.stringify(JSON.parse(displayValue.replace(/""/g, '"')), null, 2); } catch(e) {}
                 }
-
-                html += `
-                    <div class="detail-row">
-                        <div class="detail-label">${key}</div>
-                        <div class="detail-value">${displayValue}</div>
-                    </div>
-                `;
+                html += `<div class="detail-row"><div class="detail-label">${key}</div><div class="detail-value">${displayValue}</div></div>`;
             });
-
             html += `</div>`;
             li.innerHTML = html;
 
             li.querySelector('.jira-summary').addEventListener('click', function() {
                 const isOpen = li.classList.contains('open');
                 document.querySelectorAll('#results li').forEach(el => el.classList.remove('open'));
-                if (!isOpen) {
-                    li.classList.add('open');
-                }
+                if (!isOpen) li.classList.add('open');
             });
-
-            li.querySelector('.jira-details').addEventListener('click', function(e) {
-                e.stopPropagation(); 
-            });
-
+            li.querySelector('.jira-details').addEventListener('click', e => e.stopPropagation());
             listDiv.appendChild(li);
         });
     }
