@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v11</title>
+    <title>Enhancement Request Visualizer v12</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
@@ -15,24 +15,44 @@
             margin: 20px auto 30px auto; 
             background: #ffffff; 
             border-radius: 12px; 
-            padding: 25px 30px; 
+            padding: 20px 30px; 
             position: sticky; 
             top: 20px; 
             z-index: 100; 
             box-shadow: 0 8px 24px rgba(0,0,0,0.08); 
             display: flex; 
             flex-direction: column; 
+            align-items: center;
             gap: 15px; 
             border: 1px solid #eaeaea;
         }
-        .app-title { margin: 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eaeaea; padding-bottom: 15px;}
-        .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; }
-        .global-controls { display: flex; flex-direction: column; gap: 12px; }
+        .app-title { margin: 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: center; width: 100%;}
+        .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
+        .global-controls { display: flex; flex-direction: row; justify-content: center; gap: 12px; width: 100%; }
         
+        /* Clean Buttons */
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            user-select: none;
+        }
+        .btn:hover:not(:disabled) { background: #f8f9fa; border-color: #bbb; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.active { background: #e1f0ff; color: #007aff; border-color: #007aff; }
+
         /* Workspace & Panels */
         .workspace { 
             display: flex; 
-            flex-wrap: wrap; /* Allows stacking on smaller screens */
+            flex-wrap: wrap;
             gap: 30px; 
             justify-content: center; 
             max-width: 1300px; 
@@ -42,7 +62,7 @@
         .panel { 
             flex: 1; 
             width: 100%;
-            max-width: 600px; /* Constrains width in both single and split view */
+            max-width: 600px;
             background-color: #ffffff; 
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); 
             border-radius: 12px; 
@@ -58,7 +78,7 @@
         .panel[style*="display: none"] { display: none !important; }
 
         /* Form Elements */
-        input[type="file"], input[type="text"] { font-family: inherit; font-size: 0.9rem; }
+        input[type="text"] { font-family: inherit; font-size: 0.9rem; }
         select { font-family: inherit; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.9rem; width: 100%; outline: none; margin-bottom: 10px; }
         select:focus { border-color: #007aff; }
         
@@ -76,6 +96,8 @@
         /* Toggles */
         .checkbox-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.9rem; color: #111; }
         .checkbox-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #007aff; }
+        
+        .panel-header-toggles { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
 
         /* Tag Cloud & Leaders */
         .cloud-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
@@ -137,25 +159,26 @@
 <body>
 
 <div class="global-toolbar">
-    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v11</span></h1>
+    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v12</span></h1>
     <div class="global-controls">
-        <div style="margin-bottom: 5px;">
-            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">Upload Master Dataset</label>
-            <input type="file" id="csvFile" accept=".csv">
-        </div>
-        <label class="checkbox-toggle">
-            <input type="checkbox" id="globalFocusToggle" disabled>
-            <strong>Focus Mode:</strong> Pro-Services
+        <label class="btn" for="csvFile">
+            <input type="file" id="csvFile" accept=".csv" style="display: none;">
+            Import File
         </label>
-        <label class="checkbox-toggle">
-            <input type="checkbox" id="compareToggle" disabled>
-            <strong>Split View:</strong> Enable Side-by-Side Comparison
-        </label>
+        <button id="compareToggleBtn" class="btn" disabled>Side by Side Mode</button>
     </div>
 </div>
 
 <div class="workspace">
     <div id="panel-A" class="panel">
+        
+        <div class="panel-header-toggles">
+            <label class="checkbox-toggle">
+                <input type="checkbox" class="localFocusToggle" disabled>
+                <strong>Focus Mode:</strong> Pro-Services
+            </label>
+        </div>
+
         <div class="view-toggle">
             <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked>
             <label for="viewCloud-A">Tag Cloud</label>
@@ -202,6 +225,14 @@
     </div>
 
     <div id="panel-B" class="panel" style="display:none;">
+        
+        <div class="panel-header-toggles">
+            <label class="checkbox-toggle">
+                <input type="checkbox" class="localFocusToggle" disabled>
+                <strong>Focus Mode:</strong> Pro-Services
+            </label>
+        </div>
+
         <div class="view-toggle">
             <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked>
             <label for="viewCloud-B">Tag Cloud</label>
@@ -251,7 +282,6 @@
 <script>
     // --- GLOBAL STATE ---
     let globalData = [];
-    let isGlobalFocusActive = false;
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
 
@@ -366,6 +396,7 @@
             this.activeTag1 = null;
             this.activeTag2 = null;
             this.hideLeaders = false;
+            this.isFocusActive = false;
             
             // DOM Elements
             this.dom = {
@@ -376,6 +407,7 @@
                 filterSelect2: this.container.querySelector('.filterSelect2'),
                 layer2Container: this.container.querySelector('.layer2-container'),
                 hideLeadersToggle: this.container.querySelector('.hideLeadersToggle'),
+                localFocusToggle: this.container.querySelector('.localFocusToggle'),
                 searchInput: this.container.querySelector('.searchInput'),
                 tagCloud1: this.container.querySelector('.tagCloud1'),
                 leaderBoard1: this.container.querySelector('.leaderBoard1'),
@@ -389,6 +421,12 @@
         }
 
         bindEvents() {
+            this.dom.localFocusToggle.addEventListener('change', e => {
+                this.isFocusActive = e.target.checked;
+                this.resetLayer2();
+                this.refresh();
+            });
+
             this.dom.viewRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     this.mode = e.target.value;
@@ -441,7 +479,7 @@
         }
 
         getBaseData() {
-            if (!isGlobalFocusActive) return globalData;
+            if (!this.isFocusActive) return globalData;
             return globalData.filter(row => {
                 const labels = row._parsed.Labels.map(l => l.toLowerCase());
                 return labels.some(label => 
@@ -484,7 +522,7 @@
                     if (!tag || tag === 'TBD') return; 
                     let cleanTag = tag.toLowerCase();
                     if (hardExclusions.includes(cleanTag)) return;
-                    if (isGlobalFocusActive && filterType === 'Labels' && focusExclusions.includes(cleanTag)) return;
+                    if (this.isFocusActive && filterType === 'Labels' && focusExclusions.includes(cleanTag)) return;
                     tagCounts[tag] = (tagCounts[tag] || 0) + 1;
                 });
             });
@@ -642,27 +680,23 @@
                         }
                     };
                 });
-                document.getElementById('globalFocusToggle').disabled = false;
-                document.getElementById('compareToggle').disabled = false;
+                
+                // Enable panel toggles and compare button once data is loaded
+                document.querySelectorAll('.localFocusToggle').forEach(el => el.disabled = false);
+                document.getElementById('compareToggleBtn').disabled = false;
+                
                 panelA.refresh();
-                if (document.getElementById('compareToggle').checked) panelB.refresh();
+                if (document.getElementById('compareToggleBtn').classList.contains('active')) panelB.refresh();
             }
         });
     });
 
-    document.getElementById('globalFocusToggle').addEventListener('change', e => { 
-        isGlobalFocusActive = e.target.checked; 
-        panelA.resetLayer2();
-        panelB.resetLayer2();
-        if (globalData.length > 0) {
-            panelA.refresh();
-            if (document.getElementById('compareToggle').checked) panelB.refresh();
-        }
-    });
-
-    document.getElementById('compareToggle').addEventListener('change', e => {
+    document.getElementById('compareToggleBtn').addEventListener('click', (e) => {
+        const btn = e.target;
+        btn.classList.toggle('active');
         const pB = document.getElementById('panel-B');
-        if (e.target.checked) {
+        
+        if (btn.classList.contains('active')) {
             pB.style.display = 'flex';
             if (globalData.length > 0) panelB.refresh();
         } else {
