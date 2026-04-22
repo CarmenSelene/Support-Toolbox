@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v12</title>
+    <title>Enhancement Request Visualizer v13</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
@@ -26,53 +26,23 @@
             gap: 15px; 
             border: 1px solid #eaeaea;
         }
-        .app-title { margin: 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: center; width: 100%;}
+        .app-title { margin: 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: center; width: 100%; border-bottom: 1px solid #eaeaea; padding-bottom: 15px;}
         .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
-        .global-controls { display: flex; flex-direction: row; justify-content: center; gap: 12px; width: 100%; }
         
-        /* Clean Buttons */
-        .btn {
-            display: inline-block;
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #333;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            user-select: none;
-        }
-        .btn:hover:not(:disabled) { background: #f8f9fa; border-color: #bbb; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn.active { background: #e1f0ff; color: #007aff; border-color: #007aff; }
-
+        /* Universal Segmented Controls (Replaces raw buttons, radios, and checkboxes) */
+        .segmented-control { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; width: 100%; gap: 4px; margin-bottom: 15px; }
+        .segmented-control label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; user-select: none; display: flex; align-items: center; justify-content: center;}
+        .segmented-control input { display: none; }
+        .segmented-control input:checked + label, .segmented-control label.active { background: #fff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .segmented-control label:hover:not(.active) { color: #333; }
+        .segmented-control input:disabled + label { opacity: 0.5; cursor: not-allowed; color: #999; }
+        
         /* Workspace & Panels */
-        .workspace { 
-            display: flex; 
-            flex-wrap: wrap;
-            gap: 30px; 
-            justify-content: center; 
-            max-width: 1300px; 
-            margin: 0 auto; 
-            padding: 0 20px 50px 20px; 
-        }
+        .workspace { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; max-width: 1300px; margin: 0 auto; padding: 0 20px 50px 20px; }
         .panel { 
-            flex: 1; 
-            width: 100%;
-            max-width: 600px;
-            background-color: #ffffff; 
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); 
-            border-radius: 12px; 
-            padding: 30px; 
-            display: flex; 
-            flex-direction: column; 
-            opacity: 0.5; 
-            pointer-events: none; 
-            transition: opacity 0.3s; 
-            border: 1px solid #eaeaea;
+            flex: 1; width: 100%; max-width: 600px; background-color: #ffffff; 
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); border-radius: 12px; padding: 30px; 
+            display: flex; flex-direction: column; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; border: 1px solid #eaeaea;
         }
         .panel.active { opacity: 1; pointer-events: auto; }
         .panel[style*="display: none"] { display: none !important; }
@@ -81,27 +51,15 @@
         input[type="text"] { font-family: inherit; font-size: 0.9rem; }
         select { font-family: inherit; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.9rem; width: 100%; outline: none; margin-bottom: 10px; }
         select:focus { border-color: #007aff; }
-        
-        /* View Mode Segmented Control */
-        .view-toggle { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
-        .view-toggle label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; }
-        .view-toggle input[type="radio"] { display: none; }
-        .view-toggle input[type="radio"]:checked + label { background: #fff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
         /* Search Box */
-        .search-container { display: none; }
+        .search-container { display: none; margin-bottom: 15px; }
         .search-box { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; outline: none; }
         .search-box:focus { border-color: #007aff; }
 
-        /* Toggles */
-        .checkbox-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.9rem; color: #111; }
-        .checkbox-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #007aff; }
-        
-        .panel-header-toggles { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
-
         /* Tag Cloud & Leaders */
         .cloud-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
-        .cloud-section-title { font-size: 0.8rem; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 10px; }
+        .cloud-section-title { font-size: 0.8rem; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 10px; display: block; }
         .leaderBoard { display: none; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding: 12px; background: #f8faff; border: 1px solid #e1efff; border-radius: 6px; }
         .leader-title { width: 100%; font-size: 0.75rem; text-transform: uppercase; color: #007aff; font-weight: bold; margin-bottom: 4px; }
         .leader-tag { font-size: 0.85rem; background: #fff; border: 1px solid #cce4ff; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: #0056b3; transition: all 0.2s; }
@@ -159,38 +117,36 @@
 <body>
 
 <div class="global-toolbar">
-    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v12</span></h1>
-    <div class="global-controls">
-        <label class="btn" for="csvFile">
-            <input type="file" id="csvFile" accept=".csv" style="display: none;">
+    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v13</span></h1>
+    <div class="segmented-control" style="margin-bottom: 0;">
+        <label for="csvFile" id="importFileLabel">
+            <input type="file" id="csvFile" accept=".csv">
             Import File
         </label>
-        <button id="compareToggleBtn" class="btn" disabled>Side by Side Mode</button>
+        <input type="checkbox" id="compareToggleBtn" disabled>
+        <label for="compareToggleBtn">Side by Side Mode</label>
     </div>
 </div>
 
 <div class="workspace">
     <div id="panel-A" class="panel">
         
-        <div class="panel-header-toggles">
-            <label class="checkbox-toggle">
-                <input type="checkbox" class="localFocusToggle" disabled>
-                <strong>Focus Mode:</strong> Pro-Services
-            </label>
-        </div>
-
-        <div class="view-toggle">
+        <div class="segmented-control">
             <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked>
             <label for="viewCloud-A">Tag Cloud</label>
             <input type="radio" id="viewSearch-A" name="viewMode-A" value="search">
-            <label for="viewSearch-A">Deep Search</label>
+            <label for="viewSearch-A">Search by</label>
+        </div>
+
+        <div class="segmented-control">
+            <input type="checkbox" id="focus-A" class="localFocusToggle" disabled>
+            <label for="focus-A">Pro-Services</label>
+            <input type="checkbox" id="hide-A" class="hideLeadersToggle" disabled>
+            <label for="hide-A" class="hideLeadersLabel">Hide Leaders</label>
         </div>
 
         <div class="cloudControls">
-            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span class="cloud-section-title">Primary Grouping</span>
-                <label class="checkbox-toggle" style="font-size: 0.8rem;"><input type="checkbox" class="hideLeadersToggle"> Hide Leaders</label>
-            </div>
+            <span class="cloud-section-title">Primary Grouping</span>
             <select class="filterSelect1">
                 <option value="Items">Context Items</option>
                 <option value="Pages">Context Pages</option>
@@ -226,25 +182,22 @@
 
     <div id="panel-B" class="panel" style="display:none;">
         
-        <div class="panel-header-toggles">
-            <label class="checkbox-toggle">
-                <input type="checkbox" class="localFocusToggle" disabled>
-                <strong>Focus Mode:</strong> Pro-Services
-            </label>
-        </div>
-
-        <div class="view-toggle">
+        <div class="segmented-control">
             <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked>
             <label for="viewCloud-B">Tag Cloud</label>
             <input type="radio" id="viewSearch-B" name="viewMode-B" value="search">
-            <label for="viewSearch-B">Deep Search</label>
+            <label for="viewSearch-B">Search by</label>
+        </div>
+
+        <div class="segmented-control">
+            <input type="checkbox" id="focus-B" class="localFocusToggle" disabled>
+            <label for="focus-B">Pro-Services</label>
+            <input type="checkbox" id="hide-B" class="hideLeadersToggle" disabled>
+            <label for="hide-B" class="hideLeadersLabel">Hide Leaders</label>
         </div>
 
         <div class="cloudControls">
-            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span class="cloud-section-title">Primary Grouping</span>
-                <label class="checkbox-toggle" style="font-size: 0.8rem;"><input type="checkbox" class="hideLeadersToggle"> Hide Leaders</label>
-            </div>
+            <span class="cloud-section-title">Primary Grouping</span>
             <select class="filterSelect1">
                 <option value="Items">Context Items</option>
                 <option value="Pages">Context Pages</option>
@@ -407,6 +360,7 @@
                 filterSelect2: this.container.querySelector('.filterSelect2'),
                 layer2Container: this.container.querySelector('.layer2-container'),
                 hideLeadersToggle: this.container.querySelector('.hideLeadersToggle'),
+                hideLeadersLabel: this.container.querySelector('.hideLeadersLabel'),
                 localFocusToggle: this.container.querySelector('.localFocusToggle'),
                 searchInput: this.container.querySelector('.searchInput'),
                 tagCloud1: this.container.querySelector('.tagCloud1'),
@@ -432,6 +386,14 @@
                     this.mode = e.target.value;
                     this.dom.cloudControls.style.display = this.mode === 'cloud' ? 'block' : 'none';
                     this.dom.searchControls.style.display = this.mode === 'search' ? 'block' : 'none';
+                    
+                    // intelligently disable "Hide Leaders" in search mode since it has no function
+                    if (this.mode === 'search') {
+                        this.dom.hideLeadersToggle.disabled = true;
+                    } else {
+                        if (globalData.length > 0) this.dom.hideLeadersToggle.disabled = false;
+                    }
+
                     this.clearResults();
                     if (this.mode === 'cloud') this.renderPrimaryCloud();
                     if (this.mode === 'search') this.handleSearch();
@@ -503,6 +465,7 @@
         refresh() {
             this.container.classList.add('active');
             if (this.mode === 'cloud') {
+                this.dom.hideLeadersToggle.disabled = false;
                 this.renderPrimaryCloud();
                 if (this.activeTag1 && this.filter2 !== 'none') this.renderSecondaryCloud();
             } else {
@@ -664,6 +627,10 @@
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
+        
+        // Make the Import button active/blue to show a file is loaded
+        document.getElementById('importFileLabel').classList.add('active');
+
         Papa.parse(file, {
             header: true, skipEmptyLines: true,
             complete: function(results) {
@@ -682,21 +649,18 @@
                 });
                 
                 // Enable panel toggles and compare button once data is loaded
-                document.querySelectorAll('.localFocusToggle').forEach(el => el.disabled = false);
+                document.querySelectorAll('.localFocusToggle, .hideLeadersToggle').forEach(el => el.disabled = false);
                 document.getElementById('compareToggleBtn').disabled = false;
                 
                 panelA.refresh();
-                if (document.getElementById('compareToggleBtn').classList.contains('active')) panelB.refresh();
+                if (document.getElementById('compareToggleBtn').checked) panelB.refresh();
             }
         });
     });
 
-    document.getElementById('compareToggleBtn').addEventListener('click', (e) => {
-        const btn = e.target;
-        btn.classList.toggle('active');
+    document.getElementById('compareToggleBtn').addEventListener('change', (e) => {
         const pB = document.getElementById('panel-B');
-        
-        if (btn.classList.contains('active')) {
+        if (e.target.checked) {
             pB.style.display = 'flex';
             if (globalData.length > 0) panelB.refresh();
         } else {
