@@ -3,34 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v10</title>
+    <title>Enhancement Request Visualizer v11</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333333; margin: 0; padding: 0; line-height: 1.5; }
         
-        /* Global Toolbar */
-        .global-toolbar { background: #ffffff; border-bottom: 1px solid #ddd; padding: 15px 30px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; }
-        .app-title { margin: 0; font-size: 1.2rem; color: #111; display: flex; align-items: center; gap: 10px; }
+        /* Global Toolbar (Floating Card) */
+        .global-toolbar { 
+            max-width: 600px; 
+            margin: 20px auto 30px auto; 
+            background: #ffffff; 
+            border-radius: 12px; 
+            padding: 25px 30px; 
+            position: sticky; 
+            top: 20px; 
+            z-index: 100; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            border: 1px solid #eaeaea;
+        }
+        .app-title { margin: 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eaeaea; padding-bottom: 15px;}
         .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; }
-        .global-controls { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .global-controls { display: flex; flex-direction: column; gap: 12px; }
         
         /* Workspace & Panels */
-        .workspace { padding: 20px 30px; display: flex; gap: 20px; align-items: flex-start; }
-        .panel { flex: 1; min-width: 0; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; }
+        .workspace { 
+            display: flex; 
+            flex-wrap: wrap; /* Allows stacking on smaller screens */
+            gap: 30px; 
+            justify-content: center; 
+            max-width: 1300px; 
+            margin: 0 auto; 
+            padding: 0 20px 50px 20px; 
+        }
+        .panel { 
+            flex: 1; 
+            width: 100%;
+            max-width: 600px; /* Constrains width in both single and split view */
+            background-color: #ffffff; 
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); 
+            border-radius: 12px; 
+            padding: 30px; 
+            display: flex; 
+            flex-direction: column; 
+            opacity: 0.5; 
+            pointer-events: none; 
+            transition: opacity 0.3s; 
+            border: 1px solid #eaeaea;
+        }
         .panel.active { opacity: 1; pointer-events: auto; }
         .panel[style*="display: none"] { display: none !important; }
 
         /* Form Elements */
         input[type="file"], input[type="text"] { font-family: inherit; font-size: 0.9rem; }
-        select { font-family: inherit; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.9rem; width: 100%; outline: none; margin-bottom: 10px; }
+        select { font-family: inherit; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.9rem; width: 100%; outline: none; margin-bottom: 10px; }
         select:focus { border-color: #007aff; }
         
         /* View Mode Segmented Control */
-        .view-toggle { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 15px; }
+        .view-toggle { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
         .view-toggle label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; }
         .view-toggle input[type="radio"] { display: none; }
         .view-toggle input[type="radio"]:checked + label { background: #fff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Search Box */
+        .search-container { display: none; }
+        .search-box { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; outline: none; }
+        .search-box:focus { border-color: #007aff; }
 
         /* Toggles */
         .checkbox-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.9rem; color: #111; }
@@ -96,16 +137,19 @@
 <body>
 
 <div class="global-toolbar">
-    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v10</span></h1>
+    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v11</span></h1>
     <div class="global-controls">
-        <input type="file" id="csvFile" accept=".csv">
+        <div style="margin-bottom: 5px;">
+            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">Upload Master Dataset</label>
+            <input type="file" id="csvFile" accept=".csv">
+        </div>
         <label class="checkbox-toggle">
             <input type="checkbox" id="globalFocusToggle" disabled>
             <strong>Focus Mode:</strong> Pro-Services
         </label>
-        <label class="checkbox-toggle" style="padding-left: 15px; border-left: 2px solid #eaeaea;">
+        <label class="checkbox-toggle">
             <input type="checkbox" id="compareToggle" disabled>
-            Enable Split-Screen Comparison
+            <strong>Split View:</strong> Enable Side-by-Side Comparison
         </label>
     </div>
 </div>
@@ -428,7 +472,6 @@
             }
         }
 
-        // Reusable Cloud Builder logic
         buildCloudDOM(data, filterType, cloudEl, leaderEl, onClickCallback) {
             cloudEl.innerHTML = '';
             leaderEl.innerHTML = '<div class="leader-title">Frequency Leaders</div>';
@@ -451,7 +494,6 @@
                 return;
             }
 
-            // Gap Math for Leaders
             let uniqueFreqs = [...new Set(Object.values(tagCounts))].sort((a, b) => a - b);
             let maxCountValue = uniqueFreqs[uniqueFreqs.length - 1];
             let leaderThreshold = maxCountValue + 1; 
@@ -521,7 +563,6 @@
                 this.dom.leaderBoard2.style.display = 'none';
                 this.renderResults(this.getLayer1Data(), `Layer 1: ${selectedTag}`);
             });
-            // If we are redrawing but a tag was already active, preserve its visual "active" state
             if (this.activeTag1) {
                 let tags = Array.from(this.dom.tagCloud1.querySelectorAll('.tag, .leader-tag'));
                 let t = tags.find(el => el.textContent.startsWith(this.activeTag1 + ' ('));
@@ -563,7 +604,6 @@
 
                 li.querySelector('.jira-summary').addEventListener('click', () => {
                     const isOpen = li.classList.contains('open');
-                    // Reset all others in THIS panel
                     this.dom.resultsList.querySelectorAll('li').forEach(el => {
                         el.classList.remove('open');
                         el.querySelectorAll('details').forEach(d => d.open = false);
