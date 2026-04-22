@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v13</title>
+    <title>Enhancement Request Visualizer v14</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
@@ -11,32 +11,29 @@
         
         /* Global Toolbar (Floating Card) */
         .global-toolbar { 
-            max-width: 600px; 
-            margin: 20px auto 30px auto; 
-            background: #ffffff; 
-            border-radius: 12px; 
-            padding: 20px 30px; 
-            position: sticky; 
-            top: 20px; 
-            z-index: 100; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08); 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center;
-            gap: 15px; 
-            border: 1px solid #eaeaea;
+            max-width: 600px; margin: 20px auto 30px auto; background: #ffffff; border-radius: 12px; 
+            padding: 20px 30px; position: sticky; top: 20px; z-index: 100; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08); display: flex; flex-direction: column; 
+            align-items: center; border: 1px solid #eaeaea;
         }
-        .app-title { margin: 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: center; width: 100%; border-bottom: 1px solid #eaeaea; padding-bottom: 15px;}
+        .app-title { margin: 0 0 15px 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: center; width: 100%; border-bottom: 1px solid #eaeaea; padding-bottom: 15px;}
         .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
         
-        /* Universal Segmented Controls (Replaces raw buttons, radios, and checkboxes) */
-        .segmented-control { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; width: 100%; gap: 4px; margin-bottom: 15px; }
-        .segmented-control label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; user-select: none; display: flex; align-items: center; justify-content: center;}
+        /* Universal Segmented Controls */
+        .segmented-control { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; width: 100%; gap: 4px; margin-bottom: 15px; box-sizing: border-box;}
+        .segmented-control label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; user-select: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;}
         .segmented-control input { display: none; }
         .segmented-control input:checked + label, .segmented-control label.active { background: #fff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .segmented-control label:hover:not(.active) { color: #333; }
         .segmented-control input:disabled + label { opacity: 0.5; cursor: not-allowed; color: #999; }
         
+        /* Export Panel */
+        #export-panel { width: 100%; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #eaeaea; display: none; flex-direction: column; gap: 0; }
+        .export-row { display: flex; gap: 10px; width: 100%; }
+        .btn-primary { background: #007aff; color: #fff; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; font-size: 0.9rem; margin-bottom: 15px;}
+        .btn-primary:hover { background: #0056b3; }
+        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
         /* Workspace & Panels */
         .workspace { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; max-width: 1300px; margin: 0 auto; padding: 0 20px 50px 20px; }
         .panel { 
@@ -51,8 +48,6 @@
         input[type="text"] { font-family: inherit; font-size: 0.9rem; }
         select { font-family: inherit; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.9rem; width: 100%; outline: none; margin-bottom: 10px; }
         select:focus { border-color: #007aff; }
-
-        /* Search Box */
         .search-container { display: none; margin-bottom: 15px; }
         .search-box { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; outline: none; }
         .search-box:focus { border-color: #007aff; }
@@ -101,8 +96,6 @@
         .comment-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .comment-time { font-size: 0.7rem; color: #888; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
         .comment-text { white-space: pre-wrap; font-family: monospace; }
-
-        /* Related Jiras */
         .related-container { display: flex; flex-direction: column; gap: 8px; }
         .sub-record { border: 1px solid #cce4ff; border-radius: 6px; background: #ffffff; overflow: hidden; }
         .sub-record-summary { padding: 10px; background: #f0f7ff; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s; }
@@ -117,34 +110,54 @@
 <body>
 
 <div class="global-toolbar">
-    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v13</span></h1>
+    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v14</span></h1>
     <div class="segmented-control" style="margin-bottom: 0;">
         <label for="csvFile" id="importFileLabel">
-            <input type="file" id="csvFile" accept=".csv">
+            <input type="file" id="csvFile" accept=".csv" style="display:none;">
             Import File
         </label>
         <input type="checkbox" id="compareToggleBtn" disabled>
         <label for="compareToggleBtn">Side by Side Mode</label>
+        <input type="checkbox" id="exportMenuToggle" disabled>
+        <label for="exportMenuToggle">Export Options ⏷</label>
+    </div>
+
+    <div id="export-panel">
+        <div class="segmented-control">
+            <input type="radio" name="exp-scope" id="exp-pA" value="A" checked><label for="exp-pA">Panel A</label>
+            <input type="radio" name="exp-scope" id="exp-pB" value="B" disabled><label for="exp-pB">Panel B</label>
+            <input type="radio" name="exp-scope" id="exp-both" value="Both" disabled><label for="exp-both">Both Panels</label>
+        </div>
+        <div class="export-row">
+            <div class="segmented-control">
+                <input type="radio" name="exp-detail" id="exp-sum" value="summary" checked><label for="exp-sum">Summary Only</label>
+                <input type="radio" name="exp-detail" id="exp-det" value="details"><label for="exp-det">Full Details</label>
+            </div>
+            <div class="segmented-control">
+                <input type="radio" name="exp-ctx" id="exp-noctx" value="none"><label for="exp-noctx">No Context</label>
+                <input type="radio" name="exp-ctx" id="exp-ctx" value="context" checked><label for="exp-ctx">Include Context</label>
+            </div>
+        </div>
+        <div class="export-row">
+            <div class="segmented-control" style="flex: 2; margin-bottom: 0;">
+                <input type="radio" name="exp-fmt" id="exp-json" value="json" checked><label for="exp-json">JSON (Data)</label>
+                <input type="radio" name="exp-fmt" id="exp-md" value="md"><label for="exp-md">Markdown (Text)</label>
+            </div>
+            <button id="executeExportBtn" class="btn-primary" style="flex: 1;" disabled>Download</button>
+        </div>
     </div>
 </div>
 
 <div class="workspace">
     <div id="panel-A" class="panel">
-        
         <div class="segmented-control">
-            <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked>
-            <label for="viewCloud-A">Tag Cloud</label>
-            <input type="radio" id="viewSearch-A" name="viewMode-A" value="search">
-            <label for="viewSearch-A">Search by</label>
+            <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked><label for="viewCloud-A">Tag Cloud</label>
+            <input type="radio" id="viewSearch-A" name="viewMode-A" value="search"><label for="viewSearch-A">Search by</label>
         </div>
-
         <div class="segmented-control">
-            <input type="checkbox" id="focus-A" class="localFocusToggle" disabled>
-            <label for="focus-A">Pro-Services</label>
-            <input type="checkbox" id="hide-A" class="hideLeadersToggle" disabled>
-            <label for="hide-A" class="hideLeadersLabel">Hide Leaders</label>
+            <input type="checkbox" id="focus-A" class="localFocusToggle" disabled><label for="focus-A">Pro-Services</label>
+            <input type="checkbox" id="hide-A" class="hideLeadersToggle" disabled><label for="hide-A" class="hideLeadersLabel">Hide Leaders</label>
         </div>
-
         <div class="cloudControls">
             <span class="cloud-section-title">Primary Grouping</span>
             <select class="filterSelect1">
@@ -156,7 +169,6 @@
             </select>
             <div class="leaderBoard leaderBoard1"></div>
             <div class="tagCloud tagCloud1"></div>
-
             <div class="layer2-container cloud-section" style="display:none; margin-top: 15px;">
                 <span class="cloud-section-title">Sub-Grouping (Filter within selection)</span>
                 <select class="filterSelect2">
@@ -171,31 +183,22 @@
                 <div class="tagCloud tagCloud2"></div>
             </div>
         </div>
-
         <div class="searchControls" style="display:none;">
             <input type="text" class="searchInput search-box" placeholder="Search keywords, labels, JSON...">
         </div>
-        
         <div class="resultsHeader"></div>
         <ul class="results"></ul>
     </div>
 
     <div id="panel-B" class="panel" style="display:none;">
-        
         <div class="segmented-control">
-            <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked>
-            <label for="viewCloud-B">Tag Cloud</label>
-            <input type="radio" id="viewSearch-B" name="viewMode-B" value="search">
-            <label for="viewSearch-B">Search by</label>
+            <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked><label for="viewCloud-B">Tag Cloud</label>
+            <input type="radio" id="viewSearch-B" name="viewMode-B" value="search"><label for="viewSearch-B">Search by</label>
         </div>
-
         <div class="segmented-control">
-            <input type="checkbox" id="focus-B" class="localFocusToggle" disabled>
-            <label for="focus-B">Pro-Services</label>
-            <input type="checkbox" id="hide-B" class="hideLeadersToggle" disabled>
-            <label for="hide-B" class="hideLeadersLabel">Hide Leaders</label>
+            <input type="checkbox" id="focus-B" class="localFocusToggle" disabled><label for="focus-B">Pro-Services</label>
+            <input type="checkbox" id="hide-B" class="hideLeadersToggle" disabled><label for="hide-B" class="hideLeadersLabel">Hide Leaders</label>
         </div>
-
         <div class="cloudControls">
             <span class="cloud-section-title">Primary Grouping</span>
             <select class="filterSelect1">
@@ -207,7 +210,6 @@
             </select>
             <div class="leaderBoard leaderBoard1"></div>
             <div class="tagCloud tagCloud1"></div>
-
             <div class="layer2-container cloud-section" style="display:none; margin-top: 15px;">
                 <span class="cloud-section-title">Sub-Grouping (Filter within selection)</span>
                 <select class="filterSelect2">
@@ -222,11 +224,9 @@
                 <div class="tagCloud tagCloud2"></div>
             </div>
         </div>
-
         <div class="searchControls" style="display:none;">
             <input type="text" class="searchInput search-box" placeholder="Search keywords, labels, JSON...">
         </div>
-        
         <div class="resultsHeader"></div>
         <ul class="results"></ul>
     </div>
@@ -238,7 +238,7 @@
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
 
-    // --- DATA PARSING UTILS ---
+    // --- UTILS ---
     function cleanArrayString(str) {
         if (!str || str === '#N/A' || typeof str !== 'string') return [];
         return str.replace(/^\[|\]$/g, '').split(',').map(s => s.trim()).filter(s => s);
@@ -248,7 +248,7 @@
         try { return JSON.parse(str.replace(/""/g, '"')); } catch (e) { return null; }
     }
 
-    // --- HTML FORMATTERS ---
+    // --- HTML FORMATTERS (For UI) ---
     function formatContext(contextStr) {
         let obj = safeJSONParse(contextStr);
         if (!obj) return contextStr;
@@ -300,7 +300,6 @@
         return `<ul class="formatted-list">` + arr.map(a => `<li>${a}</li>`).join('') + `</ul>`;
     }
 
-    // --- SHARED DOM BUILDER ---
     function buildDetailsHtml(row, isSubRecord = false) {
         let html = '';
         const sections = [
@@ -337,12 +336,59 @@
         return html;
     }
 
-    // --- CLASS STRUCTURE FOR INDEPENDENT PANELS ---
+    // --- DATA CLEANERS FOR EXPORT ---
+    function getCleanCustomFields(fieldStr) {
+        let arr = safeJSONParse(fieldStr);
+        let clean = {};
+        if (!Array.isArray(arr)) return clean;
+        arr.forEach(item => {
+            let key = Object.keys(item)[0];
+            let val = item[key];
+            if (val === "{}" || key.includes("Approvals") || val === "N/A" || val === "TBD") return;
+            key = key.replace('Custom field (', '').replace(')', '');
+            clean[key] = val;
+        });
+        return clean;
+    }
+    
+    function getCleanComments(commentStr) {
+        let arr = safeJSONParse(commentStr);
+        if (!Array.isArray(arr)) return [];
+        return arr.map(item => {
+            let key = Object.keys(item)[0];
+            let val = item[key];
+            let time = key === 'Comment' ? '' : key;
+            let text = val;
+            if (typeof text === 'string' && text.includes(';')) {
+                let parts = text.split(';');
+                if (key === 'Comment') time = parts[0]; 
+                text = parts[parts.length - 1]; 
+                text = text.replace(/\[~accountid:.*?\]/g, 'User ');
+            }
+            return { time, text };
+        });
+    }
+
+    function extractCleanJira(row, level) {
+        let base = { id: row['Jira #'], title: row['Title'] };
+        if (level === 'summary') return base;
+        
+        return {
+            ...base,
+            description: row['Description (condensed)'] && row['Description (condensed)'] !== '#N/A' ? row['Description (condensed)'] : null,
+            contextMapping: safeJSONParse(row['POS_Context_JSON']) || {},
+            labels: cleanArrayString(row['Labels (condensed)']),
+            components: cleanArrayString(row['Components (condensed)']),
+            customFields: getCleanCustomFields(row['Custom Fields (condensed)']),
+            comments: getCleanComments(row['Comments (condensed)']),
+            relatedJiras: cleanArrayString(row['Related Jira (condensed)'])
+        };
+    }
+
+    // --- PANELS ---
     class ExplorerPanel {
         constructor(panelId) {
             this.container = document.getElementById(panelId);
-            
-            // State
             this.mode = 'cloud';
             this.filter1 = 'Items';
             this.filter2 = 'none';
@@ -350,17 +396,16 @@
             this.activeTag2 = null;
             this.hideLeaders = false;
             this.isFocusActive = false;
+            this.currentData = []; // Cached for Export
             
-            // DOM Elements
             this.dom = {
-                viewRadios: this.container.querySelectorAll('input[type="radio"]'),
+                viewRadios: this.container.querySelectorAll('input[name*="viewMode"]'),
                 cloudControls: this.container.querySelector('.cloudControls'),
                 searchControls: this.container.querySelector('.searchControls'),
                 filterSelect1: this.container.querySelector('.filterSelect1'),
                 filterSelect2: this.container.querySelector('.filterSelect2'),
                 layer2Container: this.container.querySelector('.layer2-container'),
                 hideLeadersToggle: this.container.querySelector('.hideLeadersToggle'),
-                hideLeadersLabel: this.container.querySelector('.hideLeadersLabel'),
                 localFocusToggle: this.container.querySelector('.localFocusToggle'),
                 searchInput: this.container.querySelector('.searchInput'),
                 tagCloud1: this.container.querySelector('.tagCloud1'),
@@ -370,7 +415,6 @@
                 resultsHeader: this.container.querySelector('.resultsHeader'),
                 resultsList: this.container.querySelector('.results')
             };
-
             this.bindEvents();
         }
 
@@ -386,14 +430,7 @@
                     this.mode = e.target.value;
                     this.dom.cloudControls.style.display = this.mode === 'cloud' ? 'block' : 'none';
                     this.dom.searchControls.style.display = this.mode === 'search' ? 'block' : 'none';
-                    
-                    // intelligently disable "Hide Leaders" in search mode since it has no function
-                    if (this.mode === 'search') {
-                        this.dom.hideLeadersToggle.disabled = true;
-                    } else {
-                        if (globalData.length > 0) this.dom.hideLeadersToggle.disabled = false;
-                    }
-
+                    this.dom.hideLeadersToggle.disabled = (this.mode === 'search');
                     this.clearResults();
                     if (this.mode === 'cloud') this.renderPrimaryCloud();
                     if (this.mode === 'search') this.handleSearch();
@@ -429,14 +466,22 @@
             });
         }
 
+        getContextMetadata() {
+            return {
+                viewMode: this.mode,
+                proServicesFocusActive: this.isFocusActive,
+                hideLeadersActive: this.hideLeaders,
+                searchQuery: this.mode === 'search' ? this.dom.searchInput.value : null,
+                primaryGrouping: this.mode === 'cloud' && this.activeTag1 ? { filter: this.filter1, tag: this.activeTag1 } : null,
+                secondaryGrouping: this.mode === 'cloud' && this.activeTag2 ? { filter: this.filter2, tag: this.activeTag2 } : null,
+                totalResults: this.currentData.length
+            };
+        }
+
         resetLayer2() {
-            this.activeTag1 = null;
-            this.activeTag2 = null;
-            this.filter2 = 'none';
-            this.dom.filterSelect2.value = 'none';
-            this.dom.layer2Container.style.display = 'none';
-            this.dom.tagCloud2.innerHTML = '';
-            this.dom.leaderBoard2.style.display = 'none';
+            this.activeTag1 = null; this.activeTag2 = null; this.filter2 = 'none';
+            this.dom.filterSelect2.value = 'none'; this.dom.layer2Container.style.display = 'none';
+            this.dom.tagCloud2.innerHTML = ''; this.dom.leaderBoard2.style.display = 'none';
             this.clearResults();
         }
 
@@ -460,6 +505,7 @@
         clearResults() {
             this.dom.resultsList.innerHTML = '';
             this.dom.resultsHeader.style.display = 'none';
+            this.currentData = [];
         }
 
         refresh() {
@@ -474,10 +520,7 @@
         }
 
         buildCloudDOM(data, filterType, cloudEl, leaderEl, onClickCallback) {
-            cloudEl.innerHTML = '';
-            leaderEl.innerHTML = '<div class="leader-title">Frequency Leaders</div>';
-            leaderEl.style.display = 'none';
-
+            cloudEl.innerHTML = ''; leaderEl.innerHTML = '<div class="leader-title">Frequency Leaders</div>'; leaderEl.style.display = 'none';
             let tagCounts = {};
             data.forEach(row => {
                 const tags = row._parsed[filterType] || [];
@@ -491,7 +534,7 @@
             });
 
             if (Object.keys(tagCounts).length === 0) {
-                cloudEl.innerHTML = `<p style="color: #999; font-size: 0.85rem;">No tags available for this grouping.</p>`;
+                cloudEl.innerHTML = `<p style="color: #999; font-size: 0.85rem;">No tags available.</p>`;
                 return;
             }
 
@@ -500,33 +543,20 @@
             let leaderThreshold = maxCountValue + 1; 
 
             for (let i = uniqueFreqs.length - 1; i > 0; i--) {
-                let gap = uniqueFreqs[i] - uniqueFreqs[i-1];
-                if (gap >= (maxCountValue * 0.20)) { leaderThreshold = uniqueFreqs[i]; break; }
+                if (uniqueFreqs[i] - uniqueFreqs[i-1] >= (maxCountValue * 0.20)) { leaderThreshold = uniqueFreqs[i]; break; }
             }
             
-            let regularTags = {};
-            let leaders = [];
-
+            let regularTags = {}; let leaders = [];
             Object.keys(tagCounts).forEach(tag => {
-                if (this.hideLeaders && tagCounts[tag] >= leaderThreshold && uniqueFreqs.length > 2) {
-                    leaders.push({ tag, count: tagCounts[tag] });
-                } else {
-                    regularTags[tag] = tagCounts[tag];
-                }
+                if (this.hideLeaders && tagCounts[tag] >= leaderThreshold && uniqueFreqs.length > 2) leaders.push({ tag, count: tagCounts[tag] });
+                else regularTags[tag] = tagCounts[tag];
             });
 
             if (leaders.length > 0) {
                 leaderEl.style.display = 'flex';
                 leaders.sort((a,b) => b.count - a.count).forEach(l => {
-                    const span = document.createElement('span');
-                    span.className = 'leader-tag';
-                    span.textContent = `${l.tag} (${l.count})`;
-                    span.onclick = () => {
-                        cloudEl.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
-                        leaderEl.querySelectorAll('.leader-tag').forEach(t => t.classList.remove('active'));
-                        span.classList.add('active');
-                        onClickCallback(l.tag);
-                    };
+                    const span = document.createElement('span'); span.className = 'leader-tag'; span.textContent = `${l.tag} (${l.count})`;
+                    span.onclick = () => { cloudEl.querySelectorAll('.tag').forEach(t => t.classList.remove('active')); leaderEl.querySelectorAll('.leader-tag').forEach(t => t.classList.remove('active')); span.classList.add('active'); onClickCallback(l.tag); };
                     leaderEl.appendChild(span);
                 });
             }
@@ -534,34 +564,18 @@
             let maxCount = Math.max(...Object.values(regularTags), 1);
             Object.keys(regularTags).sort().forEach(tag => {
                 const count = regularTags[tag];
-                const span = document.createElement('span');
-                span.className = 'tag';
-                span.textContent = `${tag} (${count})`;
-                
-                const minSize = 13, maxSize = 26;
-                const size = minSize + ((count / maxCount) * (maxSize - minSize));
-                span.style.fontSize = `${size}px`;
-                span.style.fontWeight = count > (maxCount / 2) ? '600' : '400';
-                span.style.opacity = Math.max(0.6, count / maxCount + 0.3);
-
-                span.onclick = () => {
-                    cloudEl.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
-                    leaderEl.querySelectorAll('.leader-tag').forEach(t => t.classList.remove('active'));
-                    span.classList.add('active');
-                    onClickCallback(tag);
-                };
+                const span = document.createElement('span'); span.className = 'tag'; span.textContent = `${tag} (${count})`;
+                const size = 13 + ((count / maxCount) * 13);
+                span.style.fontSize = `${size}px`; span.style.fontWeight = count > (maxCount / 2) ? '600' : '400'; span.style.opacity = Math.max(0.6, count / maxCount + 0.3);
+                span.onclick = () => { cloudEl.querySelectorAll('.tag').forEach(t => t.classList.remove('active')); leaderEl.querySelectorAll('.leader-tag').forEach(t => t.classList.remove('active')); span.classList.add('active'); onClickCallback(tag); };
                 cloudEl.appendChild(span);
             });
         }
 
         renderPrimaryCloud() {
             this.buildCloudDOM(this.getBaseData(), this.filter1, this.dom.tagCloud1, this.dom.leaderBoard1, (selectedTag) => {
-                this.activeTag1 = selectedTag;
-                this.dom.layer2Container.style.display = 'block';
-                this.filter2 = 'none';
-                this.dom.filterSelect2.value = 'none';
-                this.dom.tagCloud2.innerHTML = '';
-                this.dom.leaderBoard2.style.display = 'none';
+                this.activeTag1 = selectedTag; this.dom.layer2Container.style.display = 'block'; this.filter2 = 'none'; this.dom.filterSelect2.value = 'none';
+                this.dom.tagCloud2.innerHTML = ''; this.dom.leaderBoard2.style.display = 'none';
                 this.renderResults(this.getLayer1Data(), `Layer 1: ${selectedTag}`);
             });
             if (this.activeTag1) {
@@ -576,82 +590,61 @@
             const l1Data = this.getLayer1Data();
             this.buildCloudDOM(l1Data, this.filter2, this.dom.tagCloud2, this.dom.leaderBoard2, (selectedTag) => {
                 this.activeTag2 = selectedTag;
-                const finalData = l1Data.filter(row => row._parsed[this.filter2].includes(selectedTag));
-                this.renderResults(finalData, `Layer 1: ${this.activeTag1}  ➔  Layer 2: ${selectedTag}`);
+                this.renderResults(l1Data.filter(row => row._parsed[this.filter2].includes(selectedTag)), `Layer 1: ${this.activeTag1}  ➔  Layer 2: ${selectedTag}`);
             });
         }
 
         handleSearch() {
             const term = this.dom.searchInput.value.toLowerCase().trim();
             if (!term) { this.clearResults(); return; }
-            const filteredData = this.getBaseData().filter(row => row._rawSearchText.includes(term));
-            this.renderResults(filteredData, `Search: "${term}"`);
+            this.renderResults(this.getBaseData().filter(row => row._rawSearchText.includes(term)), `Search: "${term}"`);
         }
 
         renderResults(dataToRender, headerText) {
+            this.currentData = dataToRender; // Cache for export
             this.dom.resultsList.innerHTML = '';
             this.dom.resultsHeader.textContent = `Viewing ${dataToRender.length} entries for [${headerText}]`;
             this.dom.resultsHeader.style.display = 'block';
 
             dataToRender.forEach(row => {
                 const li = document.createElement('li');
-                li.innerHTML = `
-                    <div class="jira-summary">
-                        <span class="jira-id">${row['Jira #']}</span>
-                        <span class="jira-title">${row['Title']}</span>
-                    </div>
-                    <div class="jira-details">${buildDetailsHtml(row)}</div>
-                `;
-
+                li.innerHTML = `<div class="jira-summary"><span class="jira-id">${row['Jira #']}</span><span class="jira-title">${row['Title']}</span></div><div class="jira-details">${buildDetailsHtml(row)}</div>`;
                 li.querySelector('.jira-summary').addEventListener('click', () => {
                     const isOpen = li.classList.contains('open');
-                    this.dom.resultsList.querySelectorAll('li').forEach(el => {
-                        el.classList.remove('open');
-                        el.querySelectorAll('details').forEach(d => d.open = false);
-                        el.querySelectorAll('.sub-record').forEach(sr => sr.classList.remove('open'));
-                    });
+                    this.dom.resultsList.querySelectorAll('li').forEach(el => { el.classList.remove('open'); el.querySelectorAll('details').forEach(d => d.open = false); el.querySelectorAll('.sub-record').forEach(sr => sr.classList.remove('open')); });
                     if (!isOpen) li.classList.add('open');
                 });
-                
                 li.querySelector('.jira-details').addEventListener('click', e => e.stopPropagation());
                 this.dom.resultsList.appendChild(li);
             });
         }
     }
 
-    // --- INITIALIZATION ---
+    // --- INIT & GLOBAL EVENTS ---
     let panelA = new ExplorerPanel('panel-A');
     let panelB = new ExplorerPanel('panel-B');
 
-    // Global Events
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
-        
-        // Make the Import button active/blue to show a file is loaded
         document.getElementById('importFileLabel').classList.add('active');
-
         Papa.parse(file, {
             header: true, skipEmptyLines: true,
             complete: function(results) {
                 globalData = results.data.map(row => {
                     const parsedContext = safeJSONParse(row['POS_Context_JSON']);
                     return {
-                        ...row,
-                        _rawSearchText: JSON.stringify(row).toLowerCase(),
+                        ...row, _rawSearchText: JSON.stringify(row).toLowerCase(),
                         _parsed: {
-                            Items: parsedContext?.Items || [], Pages: parsedContext?.Pages || [],
-                            Suggestions: parsedContext?.Suggestions || [],
-                            Labels: cleanArrayString(row['Labels (condensed)']),
-                            Components: cleanArrayString(row['Components (condensed)'])
+                            Items: parsedContext?.Items || [], Pages: parsedContext?.Pages || [], Suggestions: parsedContext?.Suggestions || [],
+                            Labels: cleanArrayString(row['Labels (condensed)']), Components: cleanArrayString(row['Components (condensed)'])
                         }
                     };
                 });
-                
-                // Enable panel toggles and compare button once data is loaded
                 document.querySelectorAll('.localFocusToggle, .hideLeadersToggle').forEach(el => el.disabled = false);
                 document.getElementById('compareToggleBtn').disabled = false;
-                
+                document.getElementById('exportMenuToggle').disabled = false;
+                document.getElementById('executeExportBtn').disabled = false;
                 panelA.refresh();
                 if (document.getElementById('compareToggleBtn').checked) panelB.refresh();
             }
@@ -660,13 +653,123 @@
 
     document.getElementById('compareToggleBtn').addEventListener('change', (e) => {
         const pB = document.getElementById('panel-B');
+        const exportB = document.getElementById('exp-pB');
+        const exportBoth = document.getElementById('exp-both');
+        
         if (e.target.checked) {
             pB.style.display = 'flex';
+            exportB.disabled = false; exportBoth.disabled = false;
             if (globalData.length > 0) panelB.refresh();
         } else {
             pB.style.display = 'none';
+            exportB.disabled = true; exportBoth.disabled = true;
+            document.getElementById('exp-pA').checked = true; // reset scope to A
         }
     });
+
+    document.getElementById('exportMenuToggle').addEventListener('change', (e) => {
+        document.getElementById('export-panel').style.display = e.target.checked ? 'flex' : 'none';
+    });
+
+    // --- EXPORT GENERATOR ---
+    document.getElementById('executeExportBtn').addEventListener('click', () => {
+        if(globalData.length === 0) return;
+        
+        const scope = document.querySelector('input[name="exp-scope"]:checked').value;
+        const level = document.querySelector('input[name="exp-detail"]:checked').value;
+        const includeCtx = document.querySelector('input[name="exp-ctx"]:checked').value === 'context';
+        const format = document.querySelector('input[name="exp-fmt"]:checked').value;
+
+        let exportPayload = {};
+        if (scope === 'A' || scope === 'Both') {
+            exportPayload.Panel_A = {
+                metadata: panelA.getContextMetadata(),
+                data: panelA.currentData.map(row => extractCleanJira(row, level))
+            };
+        }
+        if (scope === 'B' || scope === 'Both') {
+            exportPayload.Panel_B = {
+                metadata: panelB.getContextMetadata(),
+                data: panelB.currentData.map(row => extractCleanJira(row, level))
+            };
+        }
+
+        let fileData, fileName;
+        if (format === 'json') {
+            // Remove metadata if unchecked
+            if (!includeCtx) {
+                if(exportPayload.Panel_A) delete exportPayload.Panel_A.metadata;
+                if(exportPayload.Panel_B) delete exportPayload.Panel_B.metadata;
+            }
+            fileData = JSON.stringify(exportPayload, null, 2);
+            fileName = `ER_Visualizer_Export_${new Date().getTime()}.json`;
+        } else {
+            fileData = buildMarkdown(exportPayload, includeCtx, level);
+            fileName = `ER_Visualizer_Export_${new Date().getTime()}.md`;
+        }
+
+        // Trigger Download
+        const blob = new Blob([fileData], { type: format === 'json' ? 'application/json' : 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    function buildMarkdown(payload, includeCtx, level) {
+        let md = `# Enhancement Request Export\nGenerated: ${new Date().toLocaleString()}\n\n`;
+        
+        const processPanel = (name, obj) => {
+            md += `## ${name}\n\n`;
+            if (includeCtx && obj.metadata) {
+                md += `### Filter Context\n`;
+                md += `- **Focus Mode (Pro-Services):** ${obj.metadata.proServicesFocusActive ? 'ON' : 'OFF'}\n`;
+                if (obj.metadata.viewMode === 'search') {
+                    md += `- **Search Query:** "${obj.metadata.searchQuery}"\n`;
+                } else {
+                    if(obj.metadata.primaryGrouping) md += `- **Primary Grouping:** ${obj.metadata.primaryGrouping.filter} = ${obj.metadata.primaryGrouping.tag}\n`;
+                    if(obj.metadata.secondaryGrouping) md += `- **Secondary Grouping:** ${obj.metadata.secondaryGrouping.filter} = ${obj.metadata.secondaryGrouping.tag}\n`;
+                }
+                md += `- **Total Results:** ${obj.metadata.totalResults}\n\n`;
+            }
+            
+            md += `### Jira Tickets\n\n`;
+            if (obj.data.length === 0) md += `*No tickets found.*\n\n`;
+            
+            obj.data.forEach(jira => {
+                md += `#### ${jira.id}: ${jira.title}\n`;
+                if (level === 'details') {
+                    if (jira.description) md += `**Description:**\n${jira.description}\n\n`;
+                    if (jira.labels && jira.labels.length) md += `**Labels:** ${jira.labels.join(', ')}\n\n`;
+                    if (jira.components && jira.components.length) md += `**Components:** ${jira.components.join(', ')}\n\n`;
+                    
+                    let ctxKeys = Object.keys(jira.contextMapping || {});
+                    if(ctxKeys.length) {
+                        md += `**Context Mapping:**\n`;
+                        ctxKeys.forEach(k => {
+                            if(jira.contextMapping[k].length) md += `- ${k}: ${jira.contextMapping[k].join(', ')}\n`;
+                        });
+                        md += `\n`;
+                    }
+                    
+                    if (jira.comments && jira.comments.length) {
+                        md += `**Comments:**\n`;
+                        jira.comments.forEach(c => md += `> [${c.time}] ${c.text}\n>\n`);
+                        md += `\n`;
+                    }
+                }
+            });
+            md += `---\n\n`;
+        };
+
+        if (payload.Panel_A) processPanel('Panel A', payload.Panel_A);
+        if (payload.Panel_B) processPanel('Panel B', payload.Panel_B);
+        return md;
+    }
 </script>
 
 </body>
