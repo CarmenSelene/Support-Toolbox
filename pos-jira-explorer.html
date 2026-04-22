@@ -3,64 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v9</title>
+    <title>Enhancement Request Visualizer v10</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333333; margin: 0; padding: 40px 20px; line-height: 1.5; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 30px; }
-        h1 { margin-top: 0; font-size: 1.5rem; color: #111; display: flex; align-items: center; justify-content: space-between;}
-        .version-tag { font-size: 0.85rem; font-weight: normal; color: #999; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333333; margin: 0; padding: 0; line-height: 1.5; }
         
-        /* Layout Controls */
-        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eaeaea; }
+        /* Global Toolbar */
+        .global-toolbar { background: #ffffff; border-bottom: 1px solid #ddd; padding: 15px 30px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; }
+        .app-title { margin: 0; font-size: 1.2rem; color: #111; display: flex; align-items: center; gap: 10px; }
+        .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; }
+        .global-controls { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        
+        /* Workspace & Panels */
+        .workspace { padding: 20px 30px; display: flex; gap: 20px; align-items: flex-start; }
+        .panel { flex: 1; min-width: 0; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; }
+        .panel.active { opacity: 1; pointer-events: auto; }
+        .panel[style*="display: none"] { display: none !important; }
+
+        /* Form Elements */
         input[type="file"], input[type="text"] { font-family: inherit; font-size: 0.9rem; }
-        select { font-family: inherit; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.95rem; width: 100%; outline: none; }
+        select { font-family: inherit; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; background-color: #fff; font-size: 0.9rem; width: 100%; outline: none; margin-bottom: 10px; }
         select:focus { border-color: #007aff; }
         
         /* View Mode Segmented Control */
-        .view-toggle { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 10px; }
-        .view-toggle label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; }
+        .view-toggle { display: flex; background: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 15px; }
+        .view-toggle label { flex: 1; text-align: center; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #666; transition: all 0.2s; }
         .view-toggle input[type="radio"] { display: none; }
         .view-toggle input[type="radio"]:checked + label { background: #fff; color: #007aff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-        /* Search Box */
-        .search-container { display: none; }
-        .search-box { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; outline: none; }
-        .search-box:focus { border-color: #007aff; }
-
         /* Toggles */
-        .focus-toggle { display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px dashed #eaeaea; cursor: pointer; user-select: none; }
-        .focus-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #007aff; }
-        .focus-toggle-text { font-size: 0.9rem; color: #111; }
-        .focus-toggle-subtext { font-size: 0.75rem; color: #777; margin: 2px 0 0 26px; }
+        .checkbox-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.9rem; color: #111; }
+        .checkbox-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #007aff; }
 
-        /* Leaders Board */
-        #leaderBoard { display: none; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; padding: 12px; background: #f8faff; border: 1px solid #e1efff; border-radius: 6px; }
+        /* Tag Cloud & Leaders */
+        .cloud-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
+        .cloud-section-title { font-size: 0.8rem; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 10px; }
+        .leaderBoard { display: none; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding: 12px; background: #f8faff; border: 1px solid #e1efff; border-radius: 6px; }
         .leader-title { width: 100%; font-size: 0.75rem; text-transform: uppercase; color: #007aff; font-weight: bold; margin-bottom: 4px; }
         .leader-tag { font-size: 0.85rem; background: #fff; border: 1px solid #cce4ff; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: #0056b3; transition: all 0.2s; }
         .leader-tag:hover, .leader-tag.active { background: #007aff; color: #fff; border-color: #007aff; }
-
-        /* Tag Cloud */
-        #tagCloud { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; }
+        .tagCloud { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
         .tag { cursor: pointer; color: #007aff; transition: all 0.2s ease; user-select: none; text-align: center; line-height: 1.2; }
         .tag:hover, .tag.active { color: #0056b3; text-decoration: underline; transform: scale(1.05); }
         
         /* Results Area */
-        #resultsHeader { font-weight: 600; margin-bottom: 15px; color: #555; display: none; }
-        #results { list-style: none; padding: 0; margin: 0; }
-        #results > li { font-family: Consolas, "SFMono-Regular", monospace; background: #fdfdfd; border: 1px solid #eaeaea; border-radius: 6px; margin-bottom: 10px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
-        #results > li:hover { border-color: #007aff; }
+        .resultsHeader { font-weight: 600; margin-bottom: 15px; color: #555; display: none; font-size: 0.9rem; padding: 8px; background: #f0f4f8; border-radius: 4px;}
+        .results { list-style: none; padding: 0; margin: 0; }
+        .results > li { font-family: Consolas, "SFMono-Regular", monospace; background: #fdfdfd; border: 1px solid #eaeaea; border-radius: 6px; margin-bottom: 10px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
+        .results > li:hover { border-color: #007aff; }
         .jira-summary { padding: 12px 15px; display: flex; flex-direction: column; gap: 5px; }
         .jira-id { color: #007aff; font-weight: bold; font-size: 0.9rem; }
         .jira-title { color: #333; font-size: 0.85rem; white-space: normal; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         
         /* Details View */
         .jira-details { display: none; padding: 10px 15px; background: #f9fbfc; border-top: 1px solid #eaeaea; font-size: 0.8rem; color: #555; cursor: text; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        #results > li.open .jira-details { display: block; }
-        #results > li.open { border-color: #007aff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
+        .results > li.open .jira-details { display: block; }
+        .results > li.open { border-color: #007aff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
         
-        /* Sub-Expanders (details/summary) */
+        /* Sub-Expanders */
         .sub-expander { margin-bottom: 8px; border: 1px solid #eaeaea; border-radius: 6px; background: #fff; overflow: hidden; }
         .sub-expander summary { padding: 8px 12px; font-weight: 600; font-size: 0.8rem; color: #333; background: #f0f4f8; cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; }
         .sub-expander summary::-webkit-details-marker { display: none; }
@@ -75,7 +76,6 @@
         .key-val-list { display: grid; grid-template-columns: 1fr; gap: 6px; }
         .kv-item { background: #f8f9fa; padding: 6px 8px; border-radius: 4px; border: 1px solid #eee; }
         .kv-key { font-weight: 600; color: #555; margin-right: 5px; }
-        
         .comment-item { border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
         .comment-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .comment-time { font-size: 0.7rem; color: #888; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
@@ -95,85 +95,133 @@
 </head>
 <body>
 
-<div class="container">
-    <h1>Enhancement Request Visualizer <span class="version-tag">v9</span></h1>
-    
-    <div class="controls">
+<div class="global-toolbar">
+    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v10</span></h1>
+    <div class="global-controls">
+        <input type="file" id="csvFile" accept=".csv">
+        <label class="checkbox-toggle">
+            <input type="checkbox" id="globalFocusToggle" disabled>
+            <strong>Focus Mode:</strong> Pro-Services
+        </label>
+        <label class="checkbox-toggle" style="padding-left: 15px; border-left: 2px solid #eaeaea;">
+            <input type="checkbox" id="compareToggle" disabled>
+            Enable Split-Screen Comparison
+        </label>
+    </div>
+</div>
+
+<div class="workspace">
+    <div id="panel-A" class="panel">
         <div class="view-toggle">
-            <input type="radio" id="viewCloud" name="viewMode" value="cloud" checked>
-            <label for="viewCloud">Tag Cloud</label>
-            <input type="radio" id="viewSearch" name="viewMode" value="search">
-            <label for="viewSearch">Deep Search</label>
+            <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked>
+            <label for="viewCloud-A">Tag Cloud</label>
+            <input type="radio" id="viewSearch-A" name="viewMode-A" value="search">
+            <label for="viewSearch-A">Deep Search</label>
         </div>
 
-        <div>
-            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">1. Load Jira CSV Data</label>
-            <input type="file" id="csvFile" accept=".csv">
-        </div>
+        <div class="cloudControls">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="cloud-section-title">Primary Grouping</span>
+                <label class="checkbox-toggle" style="font-size: 0.8rem;"><input type="checkbox" class="hideLeadersToggle"> Hide Leaders</label>
+            </div>
+            <select class="filterSelect1">
+                <option value="Items">Context Items</option>
+                <option value="Pages">Context Pages</option>
+                <option value="Suggestions">Context Suggestions</option>
+                <option value="Labels">Jira Labels</option>
+                <option value="Components">Jira Components</option>
+            </select>
+            <div class="leaderBoard leaderBoard1"></div>
+            <div class="tagCloud tagCloud1"></div>
 
-        <div id="cloudControls">
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">2. Filter By Grouping</label>
-                <select id="filterSelect" disabled>
+            <div class="layer2-container cloud-section" style="display:none; margin-top: 15px;">
+                <span class="cloud-section-title">Sub-Grouping (Filter within selection)</span>
+                <select class="filterSelect2">
+                    <option value="none">-- Select Secondary Filter --</option>
                     <option value="Items">Context Items</option>
                     <option value="Pages">Context Pages</option>
                     <option value="Suggestions">Context Suggestions</option>
                     <option value="Labels">Jira Labels</option>
                     <option value="Components">Jira Components</option>
                 </select>
-            </div>
-            <div>
-                <label class="focus-toggle" style="border-top: none; padding-top: 5px;">
-                    <input type="checkbox" id="hideLeadersToggle" disabled>
-                    <span class="focus-toggle-text"><strong>Hide Leaders:</strong> Remove outliers to view nuances</span>
-                </label>
+                <div class="leaderBoard leaderBoard2"></div>
+                <div class="tagCloud tagCloud2"></div>
             </div>
         </div>
 
-        <div id="searchControls" class="search-container">
-            <label style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 5px;">2. Search Entire Jira Context</label>
-            <input type="text" id="searchInput" class="search-box" placeholder="Search keywords, labels, JSON..." disabled>
+        <div class="searchControls" style="display:none;">
+            <input type="text" class="searchInput search-box" placeholder="Search keywords, labels, JSON...">
         </div>
         
-        <div>
-            <label class="focus-toggle">
-                <input type="checkbox" id="focusToggle" disabled>
-                <span class="focus-toggle-text"><strong>Focus Mode:</strong> Pro-Services</span>
-            </label>
-            <div class="focus-toggle-subtext">Restricts the entire dataset to only show these specific cases.</div>
-        </div>
+        <div class="resultsHeader"></div>
+        <ul class="results"></ul>
     </div>
 
-    <div id="leaderBoard"></div>
-    <div id="tagCloud"></div>
-    
-    <div id="resultsHeader"></div>
-    <ul id="results"></ul>
+    <div id="panel-B" class="panel" style="display:none;">
+        <div class="view-toggle">
+            <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked>
+            <label for="viewCloud-B">Tag Cloud</label>
+            <input type="radio" id="viewSearch-B" name="viewMode-B" value="search">
+            <label for="viewSearch-B">Deep Search</label>
+        </div>
+
+        <div class="cloudControls">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="cloud-section-title">Primary Grouping</span>
+                <label class="checkbox-toggle" style="font-size: 0.8rem;"><input type="checkbox" class="hideLeadersToggle"> Hide Leaders</label>
+            </div>
+            <select class="filterSelect1">
+                <option value="Items">Context Items</option>
+                <option value="Pages">Context Pages</option>
+                <option value="Suggestions">Context Suggestions</option>
+                <option value="Labels">Jira Labels</option>
+                <option value="Components">Jira Components</option>
+            </select>
+            <div class="leaderBoard leaderBoard1"></div>
+            <div class="tagCloud tagCloud1"></div>
+
+            <div class="layer2-container cloud-section" style="display:none; margin-top: 15px;">
+                <span class="cloud-section-title">Sub-Grouping (Filter within selection)</span>
+                <select class="filterSelect2">
+                    <option value="none">-- Select Secondary Filter --</option>
+                    <option value="Items">Context Items</option>
+                    <option value="Pages">Context Pages</option>
+                    <option value="Suggestions">Context Suggestions</option>
+                    <option value="Labels">Jira Labels</option>
+                    <option value="Components">Jira Components</option>
+                </select>
+                <div class="leaderBoard leaderBoard2"></div>
+                <div class="tagCloud tagCloud2"></div>
+            </div>
+        </div>
+
+        <div class="searchControls" style="display:none;">
+            <input type="text" class="searchInput search-box" placeholder="Search keywords, labels, JSON...">
+        </div>
+        
+        <div class="resultsHeader"></div>
+        <ul class="results"></ul>
+    </div>
 </div>
 
 <script>
+    // --- GLOBAL STATE ---
     let globalData = [];
-    let currentFilter = 'Items';
-    let isFocusModeActive = false;
-    let isHideLeadersActive = false;
-    let currentMode = 'cloud'; 
-
+    let isGlobalFocusActive = false;
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
 
-    // --- Data Parsing Utils ---
+    // --- DATA PARSING UTILS ---
     function cleanArrayString(str) {
         if (!str || str === '#N/A' || typeof str !== 'string') return [];
         return str.replace(/^\[|\]$/g, '').split(',').map(s => s.trim()).filter(s => s);
     }
-
     function safeJSONParse(str) {
         if (!str || str === '#N/A') return null;
-        try { return JSON.parse(str.replace(/""/g, '"')); } 
-        catch (e) { return null; }
+        try { return JSON.parse(str.replace(/""/g, '"')); } catch (e) { return null; }
     }
 
-    // --- Human Readable Formatters ---
+    // --- HTML FORMATTERS ---
     function formatContext(contextStr) {
         let obj = safeJSONParse(contextStr);
         if (!obj) return contextStr;
@@ -187,7 +235,6 @@
         });
         return html || 'No context mapped.';
     }
-
     function formatCustomFields(fieldStr) {
         let arr = safeJSONParse(fieldStr);
         if (!Array.isArray(arr)) return fieldStr;
@@ -195,15 +242,12 @@
         arr.forEach(item => {
             let key = Object.keys(item)[0];
             let val = item[key];
-            // Skip boring system approvals and empty objects
             if (val === "{}" || key.includes("Approvals") || val === "N/A" || val === "TBD") return;
             key = key.replace('Custom field (', '').replace(')', '');
             html += `<div class="kv-item"><span class="kv-key">${key}:</span> ${val}</div>`;
         });
-        html += '</div>';
-        return html;
+        return html + '</div>';
     }
-
     function formatComments(commentStr) {
         let arr = safeJSONParse(commentStr);
         if (!Array.isArray(arr)) return commentStr;
@@ -213,40 +257,23 @@
             let val = item[key];
             let time = key === 'Comment' ? '' : key;
             let text = val;
-            
-            // Clean up Jira's semicolon-delimited user strings if present
             if (typeof text === 'string' && text.includes(';')) {
                 let parts = text.split(';');
-                if (key === 'Comment') time = parts[0]; // Format: timestamp;user;text
-                text = parts[parts.length - 1]; // Usually the text is the last chunk
-                // Clean out accountid tags
+                if (key === 'Comment') time = parts[0]; 
+                text = parts[parts.length - 1]; 
                 text = text.replace(/\[~accountid:.*?\]/g, 'User ');
             }
-            html += `<div class="comment-item">
-                        <div class="comment-time">${time}</div>
-                        <div class="comment-text">${text}</div>
-                     </div>`;
+            html += `<div class="comment-item"><div class="comment-time">${time}</div><div class="comment-text">${text}</div></div>`;
         });
         return html || 'No comments.';
     }
-
     function formatSimpleList(str) {
         let arr = cleanArrayString(str);
         if (arr.length === 0) return 'None';
         return `<ul class="formatted-list">` + arr.map(a => `<li>${a}</li>`).join('') + `</ul>`;
     }
 
-    // --- App Logic ---
-    function passesPreFilter(row) {
-        if (!isFocusModeActive) return true; 
-        const labels = row._parsed.Labels.map(l => l.toLowerCase());
-        return labels.some(label => 
-            label.includes('proservices-top-bugs') || label.includes('proservices_top_bugs') ||
-            label.includes('pro-serve-top-bugs') || label.includes('pro_serve_top_bugs')
-        );
-    }
-
-    // Builds the nested Expanders
+    // --- SHARED DOM BUILDER ---
     function buildDetailsHtml(row, isSubRecord = false) {
         let html = '';
         const sections = [
@@ -261,38 +288,18 @@
         sections.forEach(sec => {
             let val = row[sec.key];
             if (val && val !== '#N/A' && val !== 'NaN' && val !== '[]') {
-                html += `
-                    <details class="sub-expander">
-                        <summary>${sec.label}</summary>
-                        <div class="sub-content">${sec.format(val)}</div>
-                    </details>
-                `;
+                html += `<details class="sub-expander"><summary>${sec.label}</summary><div class="sub-content">${sec.format(val)}</div></details>`;
             }
         });
 
-        // Related Jiras Section
         if (!isSubRecord && row['Related Jira (condensed)'] && row['Related Jira (condensed)'] !== '#N/A') {
             let relatedIds = cleanArrayString(row['Related Jira (condensed)']);
             if (relatedIds.length > 0) {
-                html += `
-                    <details class="sub-expander">
-                        <summary>Related Jira Tickets (${relatedIds.length})</summary>
-                        <div class="sub-content related-container">
-                `;
+                html += `<details class="sub-expander"><summary>Related Jira Tickets (${relatedIds.length})</summary><div class="sub-content related-container">`;
                 relatedIds.forEach(relId => {
                     let relData = globalData.find(d => d['Jira #'] === relId);
                     if (relData) {
-                        html += `
-                            <div class="sub-record">
-                                <div class="sub-record-summary" onclick="this.parentElement.classList.toggle('open'); event.stopPropagation();">
-                                    <span class="jira-id">↳ ${relData['Jira #']}</span>
-                                    <span class="jira-title">${relData['Title']}</span>
-                                </div>
-                                <div class="sub-record-details" onclick="event.stopPropagation();">
-                                    ${buildDetailsHtml(relData, true)}
-                                </div>
-                            </div>
-                        `;
+                        html += `<div class="sub-record"><div class="sub-record-summary" onclick="this.parentElement.classList.toggle('open'); event.stopPropagation();"><span class="jira-id">↳ ${relData['Jira #']}</span><span class="jira-title">${relData['Title']}</span></div><div class="sub-record-details" onclick="event.stopPropagation();">${buildDetailsHtml(relData, true)}</div></div>`;
                     } else {
                         html += `<span class="unlinked-jira">↳ ${relId} (Not exported in dataset)</span>`;
                     }
@@ -303,19 +310,279 @@
         return html;
     }
 
-    document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            currentMode = e.target.value;
-            document.getElementById('cloudControls').style.display = currentMode === 'cloud' ? 'block' : 'none';
-            document.getElementById('searchControls').style.display = currentMode === 'search' ? 'block' : 'none';
-            document.getElementById('tagCloud').style.display = currentMode === 'cloud' ? 'flex' : 'none';
-            document.getElementById('leaderBoard').style.display = 'none'; 
-            clearResults();
-            if (currentMode === 'cloud' && globalData.length > 0) renderTagCloud();
-            if (currentMode === 'search' && globalData.length > 0) handleSearch();
-        });
-    });
+    // --- CLASS STRUCTURE FOR INDEPENDENT PANELS ---
+    class ExplorerPanel {
+        constructor(panelId) {
+            this.container = document.getElementById(panelId);
+            
+            // State
+            this.mode = 'cloud';
+            this.filter1 = 'Items';
+            this.filter2 = 'none';
+            this.activeTag1 = null;
+            this.activeTag2 = null;
+            this.hideLeaders = false;
+            
+            // DOM Elements
+            this.dom = {
+                viewRadios: this.container.querySelectorAll('input[type="radio"]'),
+                cloudControls: this.container.querySelector('.cloudControls'),
+                searchControls: this.container.querySelector('.searchControls'),
+                filterSelect1: this.container.querySelector('.filterSelect1'),
+                filterSelect2: this.container.querySelector('.filterSelect2'),
+                layer2Container: this.container.querySelector('.layer2-container'),
+                hideLeadersToggle: this.container.querySelector('.hideLeadersToggle'),
+                searchInput: this.container.querySelector('.searchInput'),
+                tagCloud1: this.container.querySelector('.tagCloud1'),
+                leaderBoard1: this.container.querySelector('.leaderBoard1'),
+                tagCloud2: this.container.querySelector('.tagCloud2'),
+                leaderBoard2: this.container.querySelector('.leaderBoard2'),
+                resultsHeader: this.container.querySelector('.resultsHeader'),
+                resultsList: this.container.querySelector('.results')
+            };
 
+            this.bindEvents();
+        }
+
+        bindEvents() {
+            this.dom.viewRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    this.mode = e.target.value;
+                    this.dom.cloudControls.style.display = this.mode === 'cloud' ? 'block' : 'none';
+                    this.dom.searchControls.style.display = this.mode === 'search' ? 'block' : 'none';
+                    this.clearResults();
+                    if (this.mode === 'cloud') this.renderPrimaryCloud();
+                    if (this.mode === 'search') this.handleSearch();
+                });
+            });
+
+            this.dom.filterSelect1.addEventListener('change', e => {
+                this.filter1 = e.target.value;
+                this.resetLayer2();
+                this.renderPrimaryCloud();
+            });
+
+            this.dom.filterSelect2.addEventListener('change', e => {
+                this.filter2 = e.target.value;
+                this.activeTag2 = null;
+                if (this.filter2 === 'none') {
+                    this.dom.tagCloud2.innerHTML = '';
+                    this.dom.leaderBoard2.style.display = 'none';
+                    this.renderResults(this.getLayer1Data(), `Layer 1: ${this.activeTag1}`);
+                } else {
+                    this.renderSecondaryCloud();
+                }
+            });
+
+            this.dom.hideLeadersToggle.addEventListener('change', e => {
+                this.hideLeaders = e.target.checked;
+                this.renderPrimaryCloud();
+                if (this.activeTag1 && this.filter2 !== 'none') this.renderSecondaryCloud();
+            });
+
+            this.dom.searchInput.addEventListener('input', () => {
+                if (this.mode === 'search') this.handleSearch();
+            });
+        }
+
+        resetLayer2() {
+            this.activeTag1 = null;
+            this.activeTag2 = null;
+            this.filter2 = 'none';
+            this.dom.filterSelect2.value = 'none';
+            this.dom.layer2Container.style.display = 'none';
+            this.dom.tagCloud2.innerHTML = '';
+            this.dom.leaderBoard2.style.display = 'none';
+            this.clearResults();
+        }
+
+        getBaseData() {
+            if (!isGlobalFocusActive) return globalData;
+            return globalData.filter(row => {
+                const labels = row._parsed.Labels.map(l => l.toLowerCase());
+                return labels.some(label => 
+                    label.includes('proservices-top-bugs') || label.includes('proservices_top_bugs') ||
+                    label.includes('pro-serve-top-bugs') || label.includes('pro_serve_top_bugs')
+                );
+            });
+        }
+
+        getLayer1Data() {
+            const base = this.getBaseData();
+            if (!this.activeTag1) return base;
+            return base.filter(row => row._parsed[this.filter1].includes(this.activeTag1));
+        }
+
+        clearResults() {
+            this.dom.resultsList.innerHTML = '';
+            this.dom.resultsHeader.style.display = 'none';
+        }
+
+        refresh() {
+            this.container.classList.add('active');
+            if (this.mode === 'cloud') {
+                this.renderPrimaryCloud();
+                if (this.activeTag1 && this.filter2 !== 'none') this.renderSecondaryCloud();
+            } else {
+                this.handleSearch();
+            }
+        }
+
+        // Reusable Cloud Builder logic
+        buildCloudDOM(data, filterType, cloudEl, leaderEl, onClickCallback) {
+            cloudEl.innerHTML = '';
+            leaderEl.innerHTML = '<div class="leader-title">Frequency Leaders</div>';
+            leaderEl.style.display = 'none';
+
+            let tagCounts = {};
+            data.forEach(row => {
+                const tags = row._parsed[filterType] || [];
+                tags.forEach(tag => {
+                    if (!tag || tag === 'TBD') return; 
+                    let cleanTag = tag.toLowerCase();
+                    if (hardExclusions.includes(cleanTag)) return;
+                    if (isGlobalFocusActive && filterType === 'Labels' && focusExclusions.includes(cleanTag)) return;
+                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                });
+            });
+
+            if (Object.keys(tagCounts).length === 0) {
+                cloudEl.innerHTML = `<p style="color: #999; font-size: 0.85rem;">No tags available for this grouping.</p>`;
+                return;
+            }
+
+            // Gap Math for Leaders
+            let uniqueFreqs = [...new Set(Object.values(tagCounts))].sort((a, b) => a - b);
+            let maxCountValue = uniqueFreqs[uniqueFreqs.length - 1];
+            let leaderThreshold = maxCountValue + 1; 
+
+            for (let i = uniqueFreqs.length - 1; i > 0; i--) {
+                let gap = uniqueFreqs[i] - uniqueFreqs[i-1];
+                if (gap >= (maxCountValue * 0.20)) { leaderThreshold = uniqueFreqs[i]; break; }
+            }
+            
+            let regularTags = {};
+            let leaders = [];
+
+            Object.keys(tagCounts).forEach(tag => {
+                if (this.hideLeaders && tagCounts[tag] >= leaderThreshold && uniqueFreqs.length > 2) {
+                    leaders.push({ tag, count: tagCounts[tag] });
+                } else {
+                    regularTags[tag] = tagCounts[tag];
+                }
+            });
+
+            if (leaders.length > 0) {
+                leaderEl.style.display = 'flex';
+                leaders.sort((a,b) => b.count - a.count).forEach(l => {
+                    const span = document.createElement('span');
+                    span.className = 'leader-tag';
+                    span.textContent = `${l.tag} (${l.count})`;
+                    span.onclick = () => {
+                        cloudEl.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+                        leaderEl.querySelectorAll('.leader-tag').forEach(t => t.classList.remove('active'));
+                        span.classList.add('active');
+                        onClickCallback(l.tag);
+                    };
+                    leaderEl.appendChild(span);
+                });
+            }
+
+            let maxCount = Math.max(...Object.values(regularTags), 1);
+            Object.keys(regularTags).sort().forEach(tag => {
+                const count = regularTags[tag];
+                const span = document.createElement('span');
+                span.className = 'tag';
+                span.textContent = `${tag} (${count})`;
+                
+                const minSize = 13, maxSize = 26;
+                const size = minSize + ((count / maxCount) * (maxSize - minSize));
+                span.style.fontSize = `${size}px`;
+                span.style.fontWeight = count > (maxCount / 2) ? '600' : '400';
+                span.style.opacity = Math.max(0.6, count / maxCount + 0.3);
+
+                span.onclick = () => {
+                    cloudEl.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+                    leaderEl.querySelectorAll('.leader-tag').forEach(t => t.classList.remove('active'));
+                    span.classList.add('active');
+                    onClickCallback(tag);
+                };
+                cloudEl.appendChild(span);
+            });
+        }
+
+        renderPrimaryCloud() {
+            this.buildCloudDOM(this.getBaseData(), this.filter1, this.dom.tagCloud1, this.dom.leaderBoard1, (selectedTag) => {
+                this.activeTag1 = selectedTag;
+                this.dom.layer2Container.style.display = 'block';
+                this.filter2 = 'none';
+                this.dom.filterSelect2.value = 'none';
+                this.dom.tagCloud2.innerHTML = '';
+                this.dom.leaderBoard2.style.display = 'none';
+                this.renderResults(this.getLayer1Data(), `Layer 1: ${selectedTag}`);
+            });
+            // If we are redrawing but a tag was already active, preserve its visual "active" state
+            if (this.activeTag1) {
+                let tags = Array.from(this.dom.tagCloud1.querySelectorAll('.tag, .leader-tag'));
+                let t = tags.find(el => el.textContent.startsWith(this.activeTag1 + ' ('));
+                if (t) t.classList.add('active');
+            }
+        }
+
+        renderSecondaryCloud() {
+            if (!this.activeTag1) return;
+            const l1Data = this.getLayer1Data();
+            this.buildCloudDOM(l1Data, this.filter2, this.dom.tagCloud2, this.dom.leaderBoard2, (selectedTag) => {
+                this.activeTag2 = selectedTag;
+                const finalData = l1Data.filter(row => row._parsed[this.filter2].includes(selectedTag));
+                this.renderResults(finalData, `Layer 1: ${this.activeTag1}  ➔  Layer 2: ${selectedTag}`);
+            });
+        }
+
+        handleSearch() {
+            const term = this.dom.searchInput.value.toLowerCase().trim();
+            if (!term) { this.clearResults(); return; }
+            const filteredData = this.getBaseData().filter(row => row._rawSearchText.includes(term));
+            this.renderResults(filteredData, `Search: "${term}"`);
+        }
+
+        renderResults(dataToRender, headerText) {
+            this.dom.resultsList.innerHTML = '';
+            this.dom.resultsHeader.textContent = `Viewing ${dataToRender.length} entries for [${headerText}]`;
+            this.dom.resultsHeader.style.display = 'block';
+
+            dataToRender.forEach(row => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="jira-summary">
+                        <span class="jira-id">${row['Jira #']}</span>
+                        <span class="jira-title">${row['Title']}</span>
+                    </div>
+                    <div class="jira-details">${buildDetailsHtml(row)}</div>
+                `;
+
+                li.querySelector('.jira-summary').addEventListener('click', () => {
+                    const isOpen = li.classList.contains('open');
+                    // Reset all others in THIS panel
+                    this.dom.resultsList.querySelectorAll('li').forEach(el => {
+                        el.classList.remove('open');
+                        el.querySelectorAll('details').forEach(d => d.open = false);
+                        el.querySelectorAll('.sub-record').forEach(sr => sr.classList.remove('open'));
+                    });
+                    if (!isOpen) li.classList.add('open');
+                });
+                
+                li.querySelector('.jira-details').addEventListener('click', e => e.stopPropagation());
+                this.dom.resultsList.appendChild(li);
+            });
+        }
+    }
+
+    // --- INITIALIZATION ---
+    let panelA = new ExplorerPanel('panel-A');
+    let panelB = new ExplorerPanel('panel-B');
+
+    // Global Events
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -335,175 +602,33 @@
                         }
                     };
                 });
-                document.getElementById('filterSelect').disabled = false;
-                document.getElementById('focusToggle').disabled = false;
-                document.getElementById('hideLeadersToggle').disabled = false;
-                document.getElementById('searchInput').disabled = false;
-                if (currentMode === 'cloud') renderTagCloud();
+                document.getElementById('globalFocusToggle').disabled = false;
+                document.getElementById('compareToggle').disabled = false;
+                panelA.refresh();
+                if (document.getElementById('compareToggle').checked) panelB.refresh();
             }
         });
     });
 
-    document.getElementById('filterSelect').addEventListener('change', e => { currentFilter = e.target.value; clearResults(); renderTagCloud(); });
-    document.getElementById('hideLeadersToggle').addEventListener('change', e => { isHideLeadersActive = e.target.checked; renderTagCloud(); });
-    document.getElementById('searchInput').addEventListener('input', () => { if(currentMode === 'search') handleSearch(); });
-    document.getElementById('focusToggle').addEventListener('change', e => { 
-        isFocusModeActive = e.target.checked; 
-        clearResults(); 
-        if(currentMode === 'cloud') renderTagCloud();
-        else handleSearch();
+    document.getElementById('globalFocusToggle').addEventListener('change', e => { 
+        isGlobalFocusActive = e.target.checked; 
+        panelA.resetLayer2();
+        panelB.resetLayer2();
+        if (globalData.length > 0) {
+            panelA.refresh();
+            if (document.getElementById('compareToggle').checked) panelB.refresh();
+        }
     });
 
-    function clearResults() {
-        document.getElementById('results').innerHTML = '';
-        document.getElementById('resultsHeader').style.display = 'none';
-    }
-
-    function renderTagCloud() {
-        if(currentMode !== 'cloud') return;
-        const cloudDiv = document.getElementById('tagCloud');
-        const leaderBoard = document.getElementById('leaderBoard');
-        cloudDiv.innerHTML = '';
-        leaderBoard.innerHTML = '<div class="leader-title">Frequency Leaders</div>';
-        leaderBoard.style.display = 'none';
-        
-        let tagCounts = {};
-        const activeData = globalData.filter(passesPreFilter);
-
-        activeData.forEach(row => {
-            const tags = row._parsed[currentFilter] || [];
-            tags.forEach(tag => {
-                if (!tag || tag === 'TBD') return; 
-                let cleanTag = tag.toLowerCase();
-                
-                if (hardExclusions.includes(cleanTag)) return;
-                if (isFocusModeActive && currentFilter === 'Labels' && focusExclusions.includes(cleanTag)) return;
-
-                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-            });
-        });
-
-        if (Object.keys(tagCounts).length === 0) {
-            cloudDiv.innerHTML = `<p style="color: #777; font-size: 0.9rem;">No matching data found.</p>`;
-            return;
+    document.getElementById('compareToggle').addEventListener('change', e => {
+        const pB = document.getElementById('panel-B');
+        if (e.target.checked) {
+            pB.style.display = 'flex';
+            if (globalData.length > 0) panelB.refresh();
+        } else {
+            pB.style.display = 'none';
         }
-
-        // --- NEW 20% GAP MATH LOGIC ---
-        let uniqueFrequencies = [...new Set(Object.values(tagCounts))].sort((a, b) => a - b);
-        let maxCountValue = uniqueFrequencies[uniqueFrequencies.length - 1];
-        let leaderThreshold = maxCountValue + 1; // Default to no leaders
-
-        // Look for the largest gap starting from the top down
-        for (let i = uniqueFrequencies.length - 1; i > 0; i--) {
-            let gap = uniqueFrequencies[i] - uniqueFrequencies[i-1];
-            // If the jump to the next highest number is 20% or more of the overall maximum
-            if (gap >= (maxCountValue * 0.20)) {
-                leaderThreshold = uniqueFrequencies[i];
-                break;
-            }
-        }
-        
-        let regularTags = {};
-        let leaders = [];
-
-        Object.keys(tagCounts).forEach(tag => {
-            if (isHideLeadersActive && tagCounts[tag] >= leaderThreshold && uniqueFrequencies.length > 2) {
-                leaders.push({ tag, count: tagCounts[tag] });
-            } else {
-                regularTags[tag] = tagCounts[tag];
-            }
-        });
-
-        if (leaders.length > 0) {
-            leaderBoard.style.display = 'flex';
-            leaders.sort((a,b) => b.count - a.count).forEach(l => {
-                const span = document.createElement('span');
-                span.className = 'leader-tag';
-                span.textContent = `${l.tag} (${l.count})`;
-                span.onclick = () => {
-                    document.querySelectorAll('.leader-tag, .tag').forEach(t => t.classList.remove('active'));
-                    span.classList.add('active');
-                    renderResults(l.tag, activeData, 'cloud');
-                };
-                leaderBoard.appendChild(span);
-            });
-        }
-
-        let maxCount = Math.max(...Object.values(regularTags), 1);
-        Object.keys(regularTags).sort().forEach(tag => {
-            const count = regularTags[tag];
-            const span = document.createElement('span');
-            span.className = 'tag';
-            span.textContent = `${tag} (${count})`;
-            
-            const minSize = 14, maxSize = 28;
-            const size = minSize + ((count / maxCount) * (maxSize - minSize));
-            span.style.fontSize = `${size}px`;
-            span.style.fontWeight = count > (maxCount / 2) ? '600' : '400';
-            span.style.opacity = Math.max(0.6, count / maxCount + 0.3);
-
-            span.onclick = () => {
-                document.querySelectorAll('.leader-tag, .tag').forEach(t => t.classList.remove('active'));
-                span.classList.add('active');
-                renderResults(tag, activeData, 'cloud');
-            };
-            cloudDiv.appendChild(span);
-        });
-    }
-
-    function handleSearch() {
-        const term = document.getElementById('searchInput').value.toLowerCase().trim();
-        const activeData = globalData.filter(passesPreFilter);
-        
-        if (!term) { clearResults(); return; }
-
-        const filteredData = activeData.filter(row => row._rawSearchText.includes(term));
-        renderResults(term, filteredData, 'search');
-    }
-
-    function renderResults(queryTerm, dataToRender, mode) {
-        const listDiv = document.getElementById('results');
-        const header = document.getElementById('resultsHeader');
-        listDiv.innerHTML = '';
-        
-        let filteredData = dataToRender;
-        if (mode === 'cloud') {
-            filteredData = dataToRender.filter(row => row._parsed[currentFilter].includes(queryTerm));
-        }
-
-        header.textContent = `Viewing ${filteredData.length} entries for "${queryTerm}"`;
-        header.style.display = 'block';
-
-        filteredData.forEach(row => {
-            const li = document.createElement('li');
-            let html = `
-                <div class="jira-summary">
-                    <span class="jira-id">${row['Jira #']}</span>
-                    <span class="jira-title">${row['Title']}</span>
-                </div>
-                <div class="jira-details">
-                    ${buildDetailsHtml(row)}
-                </div>
-            `;
-            li.innerHTML = html;
-
-            li.querySelector('.jira-summary').addEventListener('click', function() {
-                const isOpen = li.classList.contains('open');
-                
-                // Close all others and reset their internal sub-expanders
-                document.querySelectorAll('#results > li').forEach(el => {
-                    el.classList.remove('open');
-                    el.querySelectorAll('details').forEach(d => d.open = false);
-                    el.querySelectorAll('.sub-record').forEach(sr => sr.classList.remove('open'));
-                });
-                
-                if (!isOpen) li.classList.add('open');
-            });
-            
-            li.querySelector('.jira-details').addEventListener('click', e => e.stopPropagation());
-            listDiv.appendChild(li);
-        });
-    }
+    });
 </script>
 
 </body>
