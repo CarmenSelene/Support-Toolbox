@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v14</title>
+    <title>Enhancement Request Visualizer v15</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333333; margin: 0; padding: 0; line-height: 1.5; }
         
-        /* Global Toolbar (Floating Card) */
+        /* Global Toolbar */
         .global-toolbar { 
             max-width: 600px; margin: 20px auto 30px auto; background: #ffffff; border-radius: 12px; 
             padding: 20px 30px; position: sticky; top: 20px; z-index: 100; 
@@ -27,6 +27,23 @@
         .segmented-control label:hover:not(.active) { color: #333; }
         .segmented-control input:disabled + label { opacity: 0.5; cursor: not-allowed; color: #999; }
         
+        /* Info Icons & Speech Bubble */
+        .info-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; border-radius: 50%; background: #ccc; color: #fff;
+            font-size: 10px; font-style: italic; font-family: Georgia, serif; cursor: pointer;
+            margin-left: 6px; opacity: 0.7; transition: opacity 0.2s, background 0.2s; user-select: none;
+        }
+        .info-icon:hover { opacity: 1; background: #007aff; }
+        .speech-bubble {
+            display: none; position: absolute; z-index: 9999;
+            background: #fff; border: 1px solid #ccc; border-radius: 8px;
+            padding: 10px 14px; font-size: 0.8rem; color: #333; max-width: 250px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); line-height: 1.4; font-weight: normal; text-align: left;
+        }
+        .speech-bubble::before { content: ''; position: absolute; top: -6px; left: 20px; border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent #fff transparent; z-index: 2; }
+        .speech-bubble::after { content: ''; position: absolute; top: -7px; left: 19px; border-width: 0 7px 7px 7px; border-style: solid; border-color: transparent transparent #ccc transparent; z-index: 1; }
+
         /* Export Panel */
         #export-panel { width: 100%; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #eaeaea; display: none; flex-direction: column; gap: 0; }
         .export-row { display: flex; gap: 10px; width: 100%; }
@@ -36,11 +53,7 @@
 
         /* Workspace & Panels */
         .workspace { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; max-width: 1300px; margin: 0 auto; padding: 0 20px 50px 20px; }
-        .panel { 
-            flex: 1; width: 100%; max-width: 600px; background-color: #ffffff; 
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); border-radius: 12px; padding: 30px; 
-            display: flex; flex-direction: column; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; border: 1px solid #eaeaea;
-        }
+        .panel { flex: 1; width: 100%; max-width: 600px; background-color: #ffffff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); border-radius: 12px; padding: 30px; display: flex; flex-direction: column; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; border: 1px solid #eaeaea;}
         .panel.active { opacity: 1; pointer-events: auto; }
         .panel[style*="display: none"] { display: none !important; }
 
@@ -54,7 +67,7 @@
 
         /* Tag Cloud & Leaders */
         .cloud-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
-        .cloud-section-title { font-size: 0.8rem; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 10px; display: block; }
+        .cloud-section-title { font-size: 0.8rem; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .leaderBoard { display: none; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding: 12px; background: #f8faff; border: 1px solid #e1efff; border-radius: 6px; }
         .leader-title { width: 100%; font-size: 0.75rem; text-transform: uppercase; color: #007aff; font-weight: bold; margin-bottom: 4px; }
         .leader-tag { font-size: 0.85rem; background: #fff; border: 1px solid #cce4ff; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: #0056b3; transition: all 0.2s; }
@@ -77,7 +90,7 @@
         .results > li.open .jira-details { display: block; }
         .results > li.open { border-color: #007aff; box-shadow: 0 2px 8px rgba(0,122,255,0.1); }
         
-        /* Sub-Expanders */
+        /* Sub-Expanders & Formatting */
         .sub-expander { margin-bottom: 8px; border: 1px solid #eaeaea; border-radius: 6px; background: #fff; overflow: hidden; }
         .sub-expander summary { padding: 8px 12px; font-weight: 600; font-size: 0.8rem; color: #333; background: #f0f4f8; cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; }
         .sub-expander summary::-webkit-details-marker { display: none; }
@@ -85,8 +98,6 @@
         .sub-expander[open] summary::before { transform: rotate(90deg); }
         .sub-expander[open] summary { border-bottom: 1px solid #eaeaea; }
         .sub-content { padding: 12px; font-size: 0.8rem; white-space: normal; line-height: 1.4; color: #444; }
-        
-        /* Data Formatting Classes */
         .formatted-list { margin: 0; padding-left: 20px; }
         .formatted-list li { margin-bottom: 4px; font-family: monospace; }
         .key-val-list { display: grid; grid-template-columns: 1fr; gap: 6px; }
@@ -110,56 +121,72 @@
 <body>
 
 <div class="global-toolbar">
-    <h1 class="app-title">Enhancement Request Visualizer <span class="version-tag">v14</span></h1>
+    <h1 class="app-title">
+        Enhancement Request Visualizer <span class="version-tag">v15</span>
+        <span class="info-icon" data-tooltip="Processes Jira exports locally in-browser for data privacy. Features tag cloud filtering, multi-layer subgrouping, side-by-side comparisons, and structured exporting for LLM analysis.">i</span>
+    </h1>
     <div class="segmented-control" style="margin-bottom: 0;">
         <label for="csvFile" id="importFileLabel">
             <input type="file" id="csvFile" accept=".csv" style="display:none;">
             Import File
+            <span class="info-icon" data-tooltip="Loads the raw Jira CSV export into local browser memory. No external server upload occurs.">i</span>
         </label>
         <input type="checkbox" id="compareToggleBtn" disabled>
-        <label for="compareToggleBtn">Side by Side Mode</label>
+        <label for="compareToggleBtn">
+            Side by Side Mode
+            <span class="info-icon" data-tooltip="Splits the workspace into two independent panels to compare different datasets or filter combinations.">i</span>
+        </label>
         <input type="checkbox" id="exportMenuToggle" disabled>
-        <label for="exportMenuToggle">Export Options ⏷</label>
+        <label for="exportMenuToggle">
+            Export Options ⏷
+            <span class="info-icon" data-tooltip="Expands the menu to download filtered datasets in machine-readable formats.">i</span>
+        </label>
     </div>
 
     <div id="export-panel">
-        <div class="segmented-control">
-            <input type="radio" name="exp-scope" id="exp-pA" value="A" checked><label for="exp-pA">Panel A</label>
-            <input type="radio" name="exp-scope" id="exp-pB" value="B" disabled><label for="exp-pB">Panel B</label>
-            <input type="radio" name="exp-scope" id="exp-both" value="Both" disabled><label for="exp-both">Both Panels</label>
+        <div class="export-row">
+            <div class="segmented-control">
+                <input type="radio" name="exp-scope" id="exp-pA" value="A" checked><label for="exp-pA">Panel A <span class="info-icon" data-tooltip="Exports only the filtered results currently visible in Panel A.">i</span></label>
+                <input type="radio" name="exp-scope" id="exp-pB" value="B" disabled><label for="exp-pB">Panel B <span class="info-icon" data-tooltip="Exports only the filtered results currently visible in Panel B.">i</span></label>
+                <input type="radio" name="exp-scope" id="exp-both" value="Both" disabled><label for="exp-both">Both Panels <span class="info-icon" data-tooltip="Exports data from both panels as separate sections in a single file.">i</span></label>
+            </div>
         </div>
         <div class="export-row">
             <div class="segmented-control">
-                <input type="radio" name="exp-detail" id="exp-sum" value="summary" checked><label for="exp-sum">Summary Only</label>
-                <input type="radio" name="exp-detail" id="exp-det" value="details"><label for="exp-det">Full Details</label>
+                <input type="radio" name="exp-detail" id="exp-sum" value="summary" checked><label for="exp-sum">Summary Only <span class="info-icon" data-tooltip="Exports only Jira IDs and Titles.">i</span></label>
+                <input type="radio" name="exp-detail" id="exp-det" value="details"><label for="exp-det">Full Details <span class="info-icon" data-tooltip="Exports parsed records including descriptions, custom fields, and comments.">i</span></label>
             </div>
             <div class="segmented-control">
-                <input type="radio" name="exp-ctx" id="exp-noctx" value="none"><label for="exp-noctx">No Context</label>
-                <input type="radio" name="exp-ctx" id="exp-ctx" value="context" checked><label for="exp-ctx">Include Context</label>
+                <input type="radio" name="exp-ctx" id="exp-noctx" value="none"><label for="exp-noctx">No Context <span class="info-icon" data-tooltip="Exports strict data without active filter history.">i</span></label>
+                <input type="radio" name="exp-ctx" id="exp-ctx" value="context" checked><label for="exp-ctx">Include Context <span class="info-icon" data-tooltip="Prepends metadata explaining which filters and focus modes were active during export.">i</span></label>
             </div>
         </div>
         <div class="export-row">
             <div class="segmented-control" style="flex: 2; margin-bottom: 0;">
-                <input type="radio" name="exp-fmt" id="exp-json" value="json" checked><label for="exp-json">JSON (Data)</label>
-                <input type="radio" name="exp-fmt" id="exp-md" value="md"><label for="exp-md">Markdown (Text)</label>
+                <input type="radio" name="exp-llm" id="exp-nollm" value="none" checked><label for="exp-nollm">No Prompt <span class="info-icon" data-tooltip="Exports strictly the dataset.">i</span></label>
+                <input type="radio" name="exp-llm" id="exp-llm" value="include"><label for="exp-llm">Add LLM Prompt <span class="info-icon" data-tooltip="Prepends system instructions to guide an LLM in summarizing and finding insights in this data.">i</span></label>
             </div>
-            <button id="executeExportBtn" class="btn-primary" style="flex: 1;" disabled>Download</button>
+            <div class="segmented-control" style="flex: 2; margin-bottom: 0;">
+                <input type="radio" name="exp-fmt" id="exp-json" value="json" checked><label for="exp-json">JSON <span class="info-icon" data-tooltip="Highly structured data array. Best for programmatic parsing and strict LLM data extraction.">i</span></label>
+                <input type="radio" name="exp-fmt" id="exp-md" value="md"><label for="exp-md">Markdown <span class="info-icon" data-tooltip="Human-readable text document. Best for attaching to chat-based LLMs.">i</span></label>
+            </div>
         </div>
+        <button id="executeExportBtn" class="btn-primary" disabled>Download</button>
     </div>
 </div>
 
 <div class="workspace">
     <div id="panel-A" class="panel">
         <div class="segmented-control">
-            <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked><label for="viewCloud-A">Tag Cloud</label>
-            <input type="radio" id="viewSearch-A" name="viewMode-A" value="search"><label for="viewSearch-A">Search by</label>
+            <input type="radio" id="viewCloud-A" name="viewMode-A" value="cloud" checked><label for="viewCloud-A">Tag Cloud <span class="info-icon" data-tooltip="Displays data grouped visually by tag frequency.">i</span></label>
+            <input type="radio" id="viewSearch-A" name="viewMode-A" value="search"><label for="viewSearch-A">Search by <span class="info-icon" data-tooltip="Enables free-form text search across all fields, including descriptions and comments.">i</span></label>
         </div>
         <div class="segmented-control">
-            <input type="checkbox" id="focus-A" class="localFocusToggle" disabled><label for="focus-A">Pro-Services</label>
-            <input type="checkbox" id="hide-A" class="hideLeadersToggle" disabled><label for="hide-A" class="hideLeadersLabel">Hide Leaders</label>
+            <input type="checkbox" id="focus-A" class="localFocusToggle" disabled><label for="focus-A">Pro-Services <span class="info-icon" data-tooltip="Restricts dataset to tickets tagged with 'Pro-Services Top Bugs'.">i</span></label>
+            <input type="checkbox" id="hide-A" class="hideLeadersToggle" disabled><label for="hide-A" class="hideLeadersLabel">Hide Leaders <span class="info-icon" data-tooltip="Removes statistically massive outliers from the cloud to make smaller tags visible.">i</span></label>
         </div>
         <div class="cloudControls">
-            <span class="cloud-section-title">Primary Grouping</span>
+            <span class="cloud-section-title">Primary Grouping <span class="info-icon" data-tooltip="Selects the metadata category used to generate the main Tag Cloud.">i</span></span>
             <select class="filterSelect1">
                 <option value="Items">Context Items</option>
                 <option value="Pages">Context Pages</option>
@@ -170,7 +197,7 @@
             <div class="leaderBoard leaderBoard1"></div>
             <div class="tagCloud tagCloud1"></div>
             <div class="layer2-container cloud-section" style="display:none; margin-top: 15px;">
-                <span class="cloud-section-title">Sub-Grouping (Filter within selection)</span>
+                <span class="cloud-section-title">Sub-Grouping <span class="info-icon" data-tooltip="Selects a secondary category to filter the currently selected tag subset further.">i</span></span>
                 <select class="filterSelect2">
                     <option value="none">-- Select Secondary Filter --</option>
                     <option value="Items">Context Items</option>
@@ -192,15 +219,15 @@
 
     <div id="panel-B" class="panel" style="display:none;">
         <div class="segmented-control">
-            <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked><label for="viewCloud-B">Tag Cloud</label>
-            <input type="radio" id="viewSearch-B" name="viewMode-B" value="search"><label for="viewSearch-B">Search by</label>
+            <input type="radio" id="viewCloud-B" name="viewMode-B" value="cloud" checked><label for="viewCloud-B">Tag Cloud <span class="info-icon" data-tooltip="Displays data grouped visually by tag frequency.">i</span></label>
+            <input type="radio" id="viewSearch-B" name="viewMode-B" value="search"><label for="viewSearch-B">Search by <span class="info-icon" data-tooltip="Enables free-form text search across all fields, including descriptions and comments.">i</span></label>
         </div>
         <div class="segmented-control">
-            <input type="checkbox" id="focus-B" class="localFocusToggle" disabled><label for="focus-B">Pro-Services</label>
-            <input type="checkbox" id="hide-B" class="hideLeadersToggle" disabled><label for="hide-B" class="hideLeadersLabel">Hide Leaders</label>
+            <input type="checkbox" id="focus-B" class="localFocusToggle" disabled><label for="focus-B">Pro-Services <span class="info-icon" data-tooltip="Restricts dataset to tickets tagged with 'Pro-Services Top Bugs'.">i</span></label>
+            <input type="checkbox" id="hide-B" class="hideLeadersToggle" disabled><label for="hide-B" class="hideLeadersLabel">Hide Leaders <span class="info-icon" data-tooltip="Removes statistically massive outliers from the cloud to make smaller tags visible.">i</span></label>
         </div>
         <div class="cloudControls">
-            <span class="cloud-section-title">Primary Grouping</span>
+            <span class="cloud-section-title">Primary Grouping <span class="info-icon" data-tooltip="Selects the metadata category used to generate the main Tag Cloud.">i</span></span>
             <select class="filterSelect1">
                 <option value="Items">Context Items</option>
                 <option value="Pages">Context Pages</option>
@@ -211,7 +238,7 @@
             <div class="leaderBoard leaderBoard1"></div>
             <div class="tagCloud tagCloud1"></div>
             <div class="layer2-container cloud-section" style="display:none; margin-top: 15px;">
-                <span class="cloud-section-title">Sub-Grouping (Filter within selection)</span>
+                <span class="cloud-section-title">Sub-Grouping <span class="info-icon" data-tooltip="Selects a secondary category to filter the currently selected tag subset further.">i</span></span>
                 <select class="filterSelect2">
                     <option value="none">-- Select Secondary Filter --</option>
                     <option value="Items">Context Items</option>
@@ -237,6 +264,30 @@
     let globalData = [];
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
+
+    // --- TOOLTIP LOGIC ---
+    document.addEventListener('click', (e) => {
+        const tooltipId = 'global-tooltip';
+        let tooltip = document.getElementById(tooltipId);
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = tooltipId;
+            tooltip.className = 'speech-bubble';
+            document.body.appendChild(tooltip);
+        }
+
+        if (e.target.classList.contains('info-icon')) {
+            e.preventDefault();
+            e.stopPropagation();
+            const rect = e.target.getBoundingClientRect();
+            tooltip.innerHTML = e.target.getAttribute('data-tooltip');
+            tooltip.style.display = 'block';
+            tooltip.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+            tooltip.style.left = (rect.left + window.scrollX - 20) + 'px';
+        } else {
+            tooltip.style.display = 'none';
+        }
+    });
 
     // --- UTILS ---
     function cleanArrayString(str) {
@@ -396,7 +447,7 @@
             this.activeTag2 = null;
             this.hideLeaders = false;
             this.isFocusActive = false;
-            this.currentData = []; // Cached for Export
+            this.currentData = []; 
             
             this.dom = {
                 viewRadios: this.container.querySelectorAll('input[name*="viewMode"]'),
@@ -601,7 +652,7 @@
         }
 
         renderResults(dataToRender, headerText) {
-            this.currentData = dataToRender; // Cache for export
+            this.currentData = dataToRender; 
             this.dom.resultsList.innerHTML = '';
             this.dom.resultsHeader.textContent = `Viewing ${dataToRender.length} entries for [${headerText}]`;
             this.dom.resultsHeader.style.display = 'block';
@@ -627,24 +678,31 @@
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
+        
         document.getElementById('importFileLabel').classList.add('active');
+
         Papa.parse(file, {
             header: true, skipEmptyLines: true,
             complete: function(results) {
                 globalData = results.data.map(row => {
                     const parsedContext = safeJSONParse(row['POS_Context_JSON']);
                     return {
-                        ...row, _rawSearchText: JSON.stringify(row).toLowerCase(),
+                        ...row,
+                        _rawSearchText: JSON.stringify(row).toLowerCase(),
                         _parsed: {
-                            Items: parsedContext?.Items || [], Pages: parsedContext?.Pages || [], Suggestions: parsedContext?.Suggestions || [],
-                            Labels: cleanArrayString(row['Labels (condensed)']), Components: cleanArrayString(row['Components (condensed)'])
+                            Items: parsedContext?.Items || [], Pages: parsedContext?.Pages || [],
+                            Suggestions: parsedContext?.Suggestions || [],
+                            Labels: cleanArrayString(row['Labels (condensed)']),
+                            Components: cleanArrayString(row['Components (condensed)'])
                         }
                     };
                 });
+                
                 document.querySelectorAll('.localFocusToggle, .hideLeadersToggle').forEach(el => el.disabled = false);
                 document.getElementById('compareToggleBtn').disabled = false;
                 document.getElementById('exportMenuToggle').disabled = false;
                 document.getElementById('executeExportBtn').disabled = false;
+                
                 panelA.refresh();
                 if (document.getElementById('compareToggleBtn').checked) panelB.refresh();
             }
@@ -663,7 +721,7 @@
         } else {
             pB.style.display = 'none';
             exportB.disabled = true; exportBoth.disabled = true;
-            document.getElementById('exp-pA').checked = true; // reset scope to A
+            document.getElementById('exp-pA').checked = true; 
         }
     });
 
@@ -678,9 +736,19 @@
         const scope = document.querySelector('input[name="exp-scope"]:checked').value;
         const level = document.querySelector('input[name="exp-detail"]:checked').value;
         const includeCtx = document.querySelector('input[name="exp-ctx"]:checked').value === 'context';
+        const includeLLM = document.querySelector('input[name="exp-llm"]:checked').value === 'include';
         const format = document.querySelector('input[name="exp-fmt"]:checked').value;
 
         let exportPayload = {};
+        
+        if (includeLLM) {
+            if (scope === 'Both') {
+                exportPayload.LLM_System_Instructions = "Analyze the following two Jira datasets (Panel A and Panel B). Summarize the core issues, identify nuances within the data, and discover insights for each set. Then, compare the two datasets. Provide an additional section outlining insights gleaned from comparing them, taking into account both the individual tickets and the context settings that generated these datasets.";
+            } else {
+                exportPayload.LLM_System_Instructions = "Analyze the following Jira dataset. Summarize the core issues, look for nuances within the data, and discover insights based on the provided tickets and context.";
+            }
+        }
+
         if (scope === 'A' || scope === 'Both') {
             exportPayload.Panel_A = {
                 metadata: panelA.getContextMetadata(),
@@ -696,7 +764,6 @@
 
         let fileData, fileName;
         if (format === 'json') {
-            // Remove metadata if unchecked
             if (!includeCtx) {
                 if(exportPayload.Panel_A) delete exportPayload.Panel_A.metadata;
                 if(exportPayload.Panel_B) delete exportPayload.Panel_B.metadata;
@@ -704,11 +771,10 @@
             fileData = JSON.stringify(exportPayload, null, 2);
             fileName = `ER_Visualizer_Export_${new Date().getTime()}.json`;
         } else {
-            fileData = buildMarkdown(exportPayload, includeCtx, level);
+            fileData = buildMarkdown(exportPayload, includeCtx, level, includeLLM);
             fileName = `ER_Visualizer_Export_${new Date().getTime()}.md`;
         }
 
-        // Trigger Download
         const blob = new Blob([fileData], { type: format === 'json' ? 'application/json' : 'text/markdown' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -720,9 +786,13 @@
         URL.revokeObjectURL(url);
     });
 
-    function buildMarkdown(payload, includeCtx, level) {
+    function buildMarkdown(payload, includeCtx, level, includeLLM) {
         let md = `# Enhancement Request Export\nGenerated: ${new Date().toLocaleString()}\n\n`;
         
+        if (includeLLM) {
+            md += `> **System Instructions:** ${payload.LLM_System_Instructions}\n\n`;
+        }
+
         const processPanel = (name, obj) => {
             md += `## ${name}\n\n`;
             if (includeCtx && obj.metadata) {
