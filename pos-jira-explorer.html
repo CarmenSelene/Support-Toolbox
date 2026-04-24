@@ -3,19 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhancement Request Visualizer v15</title>
+    <title>Enhancement Request Visualizer v16</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* Base & Vibe */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333333; margin: 0; padding: 0; line-height: 1.5; }
         
-        /* Global Toolbar */
+        /* Global Toolbar (Sliding Drawer) */
         .global-toolbar { 
-            max-width: 600px; margin: 20px auto 30px auto; background: #ffffff; border-radius: 12px; 
-            padding: 20px 30px; position: sticky; top: 20px; z-index: 100; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08); display: flex; flex-direction: column; 
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 40px); max-width: 600px; 
+            background: #ffffff; border-radius: 12px; 
+            padding: 20px 30px; z-index: 1000; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); display: flex; flex-direction: column; 
             align-items: center; border: 1px solid #eaeaea;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        /* Collapsed State */
+        .global-toolbar.collapsed {
+            top: 0; transform: translate(-50%, -100%);
+        }
+
+        /* The Pull Tab */
+        .toolbar-tab {
+            position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%);
+            background: #ffffff; border: 1px solid #eaeaea; border-top: none;
+            padding: 2px 20px; border-radius: 0 0 12px 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08); cursor: pointer;
+            font-size: 0.75rem; font-weight: 600; color: #666;
+            display: flex; align-items: center; gap: 6px; user-select: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .toolbar-tab:hover { background: #f8f9fa; color: #007aff; }
+        .toolbar-tab .tab-icon { transition: transform 0.3s ease; transform: rotate(180deg); }
+        .global-toolbar.collapsed .toolbar-tab .tab-icon { transform: rotate(0deg); }
+
         .app-title { margin: 0 0 15px 0; font-size: 1.3rem; color: #111; display: flex; align-items: center; justify-content: center; width: 100%; border-bottom: 1px solid #eaeaea; padding-bottom: 15px;}
         .version-tag { font-size: 0.8rem; font-weight: normal; color: #fff; background: #007aff; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
         
@@ -52,6 +75,7 @@
         .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 
         /* Workspace & Panels */
+        .workspace-spacer { height: 180px; width: 100%; } /* Prevents content from hiding behind absolute header initially */
         .workspace { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; max-width: 1300px; margin: 0 auto; padding: 0 20px 50px 20px; }
         .panel { flex: 1; width: 100%; max-width: 600px; background-color: #ffffff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); border-radius: 12px; padding: 30px; display: flex; flex-direction: column; opacity: 0.5; pointer-events: none; transition: opacity 0.3s; border: 1px solid #eaeaea;}
         .panel.active { opacity: 1; pointer-events: auto; }
@@ -120,9 +144,9 @@
 </head>
 <body>
 
-<div class="global-toolbar">
+<div id="globalToolbar" class="global-toolbar">
     <h1 class="app-title">
-        Enhancement Request Visualizer <span class="version-tag">v15</span>
+        Enhancement Request Visualizer <span class="version-tag">v16</span>
         <span class="info-icon" data-tooltip="Processes Jira exports locally in-browser for data privacy. Features tag cloud filtering, multi-layer subgrouping, side-by-side comparisons, and structured exporting for LLM analysis.">i</span>
     </h1>
     <div class="segmented-control" style="margin-bottom: 0;">
@@ -173,7 +197,13 @@
         </div>
         <button id="executeExportBtn" class="btn-primary" disabled>Download</button>
     </div>
+
+    <div id="toolbarTab" class="toolbar-tab">
+        <span class="tab-icon">▼</span> Menu
+    </div>
 </div>
+
+<div class="workspace-spacer"></div>
 
 <div class="workspace">
     <div id="panel-A" class="panel">
@@ -264,6 +294,31 @@
     let globalData = [];
     const hardExclusions = ['jira_escalated', 'jira-escalated'];
     const focusExclusions = ['proservices-top-bugs', 'proservices_top_bugs', 'pro-serve-top-bugs', 'pro_serve_top_bugs'];
+
+    // --- TOOLBAR SCROLL LOGIC ---
+    const toolbar = document.getElementById('globalToolbar');
+    let isToolbarManuallyOpen = false;
+
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 80) {
+            if (!isToolbarManuallyOpen && !toolbar.classList.contains('collapsed')) {
+                toolbar.classList.add('collapsed');
+            }
+        } else {
+            toolbar.classList.remove('collapsed');
+            isToolbarManuallyOpen = false;
+        }
+    });
+
+    document.getElementById('toolbarTab').addEventListener('click', () => {
+        if (toolbar.classList.contains('collapsed')) {
+            toolbar.classList.remove('collapsed');
+            isToolbarManuallyOpen = true; 
+        } else {
+            toolbar.classList.add('collapsed');
+            isToolbarManuallyOpen = true; 
+        }
+    });
 
     // --- TOOLTIP LOGIC ---
     document.addEventListener('click', (e) => {
@@ -727,6 +782,13 @@
 
     document.getElementById('exportMenuToggle').addEventListener('change', (e) => {
         document.getElementById('export-panel').style.display = e.target.checked ? 'flex' : 'none';
+        
+        // Re-adjust toolbar height state if scrolled
+        const toolbar = document.getElementById('globalToolbar');
+        if (toolbar.classList.contains('collapsed')) {
+            toolbar.classList.remove('collapsed');
+            isToolbarManuallyOpen = true;
+        }
     });
 
     // --- EXPORT GENERATOR ---
